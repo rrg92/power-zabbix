@@ -287,169 +287,255 @@ Function ZabbixAPI_Get {
 }
 
 
-Function Get-ZabbixHost {
-	param(
-		$Name = @()
-		,[switch]$Search 	   = $false
-		,[switch]$SearchByAny  = $false
-		,[switch]$StartSearch  = $false
-	)
 
+############# Aux cmdlets ###############
+#######Cmdlets auxiliares que podem ser usados para facilitar a interação com a API, mas que não são implementações da mesma!################
+	
+	#Retorna uma hashtable com as configurações para a interface a ser usada com o cmdlet Create-ZabbixHost
+	#Para mais informações verifique o link https://www.zabbix.com/documentation/3.4/manual/api/reference/hostinterface/object
+	Function Get-InterfaceConfig {
+		param(
+			#Pode ser um nome DNS ou IP. O que vai determinar o tipo é a presença ou não do parâmetro -IsIP
+			$Address = $null
 			
-	#Determinando searchByAny
-	$APIParams = ZabbixAPI_NewParams "host.get"
-	ZabbixAPI_Get $APIParams -APIParams @{
-				common = @{
-						search 		= $Search 
-						searchByAny = $SearchByAny
-						startSearch = $StartSearch
-					}
-					
-				props = @{
-					name = $Name 
-				}
-			}		
-	$APIString = ConvertToJson $APIParams;
-						
-	#Chama a Url
-	$resp = CallZabbixURL -data $APIString;
-	$resultado = TranslateZabbixJson $resp;
-	
-	
-	$ResultsObjects = @();
-	if($resultado){
-		$resultado | %{
-			$ResultsObjects += NEw-Object PSObject -Prop $_;	
-		}
-	}
+			,#Porta da interface. 
+				$Port = 10050
+				
+			,#Indica que a interface não é a padrão!
+			 #Neste caso, a propriedade main será marcada como 0.
+				[switch]$NoMain 	= $false
 
-	return $ResultsObjects;
-}
-
-Function Get-ZabbixHostGroup {
-	param(
-		$Name = @()
-		,[switch]$Search 	   = $false
-		,[switch]$SearchByAny  = $false
-		,[switch]$StartSearch  = $false
-	)
-
+			,#Indica se o valor em Address é um IP. Se sim, a interface será configurada como IP.
+				[switch]$IsIP		= $False
 			
-	#Determinando searchByAny
-	$APIParams = ZabbixAPI_NewParams "hostgroup.get"
-	ZabbixAPI_Get $APIParams -APIParams @{
-				common = @{
-						search 		= $Search 
-						searchByAny = $SearchByAny
-						startSearch = $StartSearch
-					}
-					
-				props = @{
-					name = $Name 
-				}
-			}		
-	$APIString = ConvertToJson $APIParams;
-						
-	#Chama a Url
-	$resp = CallZabbixURL -data $APIString;
-	$resultado = TranslateZabbixJson $resp;
-	
-	
-	$ResultsObjects = @();
-	if($resultado){
-		$resultado | %{
-			$ResultsObjects += NEw-Object PSObject -Prop $_;	
-		}
-	}
-
-	return $ResultsObjects;
-}
-
-Function Get-ZabbixTemplates {
-	param(
-		$Name = @()
-		,[switch]$Search 	   = $false
-		,[switch]$SearchByAny  = $false
-		,[switch]$StartSearch  = $false
-	)
-
 			
-	#Determinando searchByAny
-	$APIParams = ZabbixAPI_NewParams "template.get"
-	ZabbixAPI_Get $APIParams -APIParams @{
-				common = @{
-						search 		= $Search 
-						searchByAny = $SearchByAny
-						startSearch = $StartSearch
+			,#Tipo da interface. Pode se usar o nome ou id. Verifique o link para os ids!
+				[ValidateSet("Agent","SNMP","IPMI","JMX",1,2,3,4)]
+				$Type = "Agent"
+		)
+		
+		$Config = @{dns="";ip="";main=1;port=$Port;type=$null;useip=1};
+		
+		#Transforma o tipo em número!
+		if($Type -is [string]){
+			$i = 1;
+			$Type = @("Agent","SNMP","IPMI","JMX") |  ? { if($Type -eq $_){return $true} else {$i++;return $false} } | %{$i};
+		}
+		
+		$Config.type = $Type;
+		
+		
+		if($IsIP){
+			$Config.ip = $Address;
+		} else {
+			$Config.dns = $Address;
+			$Config.useip = 0;
+		}
+		
+		if($NoMain){
+			$Config.main = 0;
+		}
+		
+		
+		return $Config;
+		
+	}
+
+
+############# API cmdlets ###############
+#######API implementations. A partir daqui, segue as implementações da API################
+
+######### HOST
+	#Equivalente ao método da API host.get
+	#https://www.zabbix.com/documentation/3.4/manual/api/reference/host/get
+	Function Get-ZabbixHost {
+		[CmdLetBinding()]
+		param(
+			$Name = @()
+			,[switch]$Search 	   = $false
+			,[switch]$SearchByAny  = $false
+			,[switch]$StartSearch  = $false
+		)
+
+				
+		#Determinando searchByAny
+		$APIParams = ZabbixAPI_NewParams "host.get"
+		ZabbixAPI_Get $APIParams -APIParams @{
+					common = @{
+							search 		= $Search 
+							searchByAny = $SearchByAny
+							startSearch = $StartSearch
+						}
+						
+					props = @{
+						name = $Name 
 					}
-					
-				props = @{
-					name = $Name 
-				}
-			}		
-	$APIString = ConvertToJson $APIParams;
+				}		
+		$APIString = ConvertToJson $APIParams;
+							
+		#Chama a Url
+		$resp = CallZabbixURL -data $APIString;
+		$resultado = TranslateZabbixJson $resp;
+		
+		
+		$ResultsObjects = @();
+		if($resultado){
+			$resultado | %{
+				$ResultsObjects += NEw-Object PSObject -Prop $_;	
+			}
+		}
+
+		return $ResultsObjects;
+	}
+
+
+	#Equivalente ao método da API host.create
+	#https://www.zabbix.com/documentation/3.4/manual/api/reference/hostgroup/get
+	Function Create-ZabbixHost {
+		[CmdLetBinding()]
+		param(
+			$HostName
+			,$VisibleName = $null
+			,$Interfaces
+			,$Groups = $null
+			,$Templates = $null
+		)
+
+		
+		$APIPArams = ZabbixAPI_NewParams "host.create";
+		
+		$APIPArams.params.add("host",$HostName);
+		
+		if($VisibleName){
+			$APIPArams.params.add("name",$VisibleName);
+		}
+		
+		$APIParams.params.add("interfaces",$interfaces);
+		
+		$AllGroups = @();
+		if($Groups)	{
+			$Groups | %{
+				$AllGroups += @{groupid=$_.groupid};
+			}
+			$APIParams.params.add("groups", $AllGroups );
+		}
+
+		
+		$AllTemplates = @();
+		if($Templates){
+			$Templates | %{
+				$AllTemplates += @{templateid=$_.templateid};
+			}
+			$APIParams.params.add("templates", $AllTemplates );
+		}
+		
+		
+		$APIString = ConvertToJson $APIParams;
+							
+		#Chama a Url
+		$resp = CallZabbixURL -data $APIString;
+		$resultado = TranslateZabbixJson $resp;
+		
+		
+		$ResultsObjects = @();
+		if($resultado){
+			$resultado | %{
+				$ResultsObjects += NEw-Object PSObject -Prop $_;	
+			}
+		}
+
+		return $ResultsObjects;
+	}
+
+
+######### HOSTGROUP
+	#Equivalente ao método da API hostgroup.get
+	#https://www.zabbix.com/documentation/3.4/manual/api/reference/hostgroup/get
+	Function Get-ZabbixHostGroup {
+		[CmdLetBinding()]
+		param(
+			$Name = @()
+			,[switch]$Search 	   = $false
+			,[switch]$SearchByAny  = $false
+			,[switch]$StartSearch  = $false
+		)
+
+				
+		#Determinando searchByAny
+		$APIParams = ZabbixAPI_NewParams "hostgroup.get"
+		ZabbixAPI_Get $APIParams -APIParams @{
+					common = @{
+							search 		= $Search 
+							searchByAny = $SearchByAny
+							startSearch = $StartSearch
+						}
 						
-	#Chama a Url
-	$resp = CallZabbixURL -data $APIString;
-	$resultado = TranslateZabbixJson $resp;
-	
-	
-	$ResultsObjects = @();
-	if($resultado){
-		$resultado | %{
-			$ResultsObjects += NEw-Object PSObject -Prop $_;	
+					props = @{
+						name = $Name 
+					}
+				}		
+		$APIString = ConvertToJson $APIParams;
+							
+		#Chama a Url
+		$resp = CallZabbixURL -data $APIString;
+		$resultado = TranslateZabbixJson $resp;
+		
+		
+		$ResultsObjects = @();
+		if($resultado){
+			$resultado | %{
+				$ResultsObjects += NEw-Object PSObject -Prop $_;	
+			}
 		}
-	}
 
-	return $ResultsObjects;
-}
-
-Function Create-ZabbixHost {
-	param(
-		$HostName
-		,$Interfaces
-		,$Groups = $null
-		,$Templates = $null
-	)
-
-	
-	$APIPArams = ZabbixAPI_NewParams "host.create";
-	
-	$APIPArams.params.add("host",$HostName);
-	$APIParams.params.add("interfaces",$interfaces);
-	
-	$AllGroups = @();
-	if($Groups)	{
-		$Groups | %{
-			$AllGroups += @{groupid=$_.groupid};
-		}
-		$APIParams.params.add("groups", $AllGroups );
+		return $ResultsObjects;
 	}
 
 	
-	$AllTemplates = @();
-	if($Templates){
-		$Templates | %{
-			$AllTemplates += @{groupid=$_.groupid};
-		}
-		$APIParams.params.add("templates", $AllTemplates );
-	}
-	
-	
-	$APIString = ConvertToJson $APIParams;
+######### TEMPLATE
+	#Equivalente ao método da API template.get
+	#https://www.zabbix.com/documentation/3.4/manual/api/reference/template/get
+	Function Get-ZabbixTemplate {
+		[CmdLetBinding()]
+		param(
+			$Name = @()
+			,[switch]$Search 	   = $false
+			,[switch]$SearchByAny  = $false
+			,[switch]$StartSearch  = $false
+		)
+
+				
+		#Determinando searchByAny
+		$APIParams = ZabbixAPI_NewParams "template.get"
+		ZabbixAPI_Get $APIParams -APIParams @{
+					common = @{
+							search 		= $Search 
+							searchByAny = $SearchByAny
+							startSearch = $StartSearch
+						}
 						
-	#Chama a Url
-	$resp = CallZabbixURL -data $APIString;
-	$resultado = TranslateZabbixJson $resp;
-	
-	
-	$ResultsObjects = @();
-	if($resultado){
-		$resultado | %{
-			$ResultsObjects += NEw-Object PSObject -Prop $_;	
+					props = @{
+						name = $Name 
+					}
+				}		
+		$APIString = ConvertToJson $APIParams;
+							
+		#Chama a Url
+		$resp = CallZabbixURL -data $APIString;
+		$resultado = TranslateZabbixJson $resp;
+		
+		
+		$ResultsObjects = @();
+		if($resultado){
+			$resultado | %{
+				$ResultsObjects += NEw-Object PSObject -Prop $_;	
+			}
 		}
+
+		return $ResultsObjects;
 	}
 
-	return $ResultsObjects;
-}
 
+	
+	
+	
