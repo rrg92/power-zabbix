@@ -299,7 +299,7 @@ Function ZabbixAPI_Get {
 			$Address = $null
 			
 			,#Porta da interface. 
-				$Port = 10050
+				[int]$Port = 10050
 				
 			,#Indica que a interface não é a padrão!
 			 #Neste caso, a propriedade main será marcada como 0.
@@ -314,7 +314,7 @@ Function ZabbixAPI_Get {
 				$Type = "Agent"
 		)
 		
-		$Config = @{dns="";ip="";main=1;port=$Port;type=$null;useip=1};
+		$Config = @{dns="";ip="";main=1;port=$Port;type=[int]$null;useip=1};
 		
 		#Transforma o tipo em número!
 		if($Type -is [string]){
@@ -326,9 +326,9 @@ Function ZabbixAPI_Get {
 		
 		
 		if($IsIP){
-			$Config.ip = $Address;
+			$Config.ip = [string]$Address;
 		} else {
-			$Config.dns = $Address;
+			$Config.dns = [string]$Address;
 			$Config.useip = 0;
 		}
 		
