@@ -1,5 +1,5 @@
 #Módulo para o powershell!
-
+$ErrorActionPreference= "Stop";
 
 #Verifica se um assembly já foi carregado!
 Function CheckAssembly {
@@ -50,13 +50,25 @@ Function ConvertFromJson([string]$json) {
 Function CallZabbixURL([object]$data = $null,$url = $null,$method = "POST", $contentType = "application/json-rpc"){
 	$ErrorActionPreference="Stop";
 	
-	write-verbose "URL param is: $Url";
+	write-verbose "CallZabbixURL: URL param is: $Url";
 	
 	
 	try {
 		if($data -is [hashtable]){
+			write-verbose "Converting input object to json string..."
 			$data = ConvertToJson $data;
 		}
+		
+		#Checando cache...
+		$Cache = $Global:PowerZabbix_AuthCache;
+		if(!$URL){
+			$URL = $Cache.LastURL;
+		} else {
+			$Cache.LastURL = $URL;
+		}
+		
+		write-verbose "Usando URL: $URL"
+		
 		
 		if($Global:PowerZabbix_ZabbixUrl -and !$url){
 			$url = $Global:PowerZabbix_ZabbixUrl;
@@ -131,6 +143,69 @@ Function CallZabbixURL([object]$data = $null,$url = $null,$method = "POST", $con
 	}
 }
 
+#Irá conter as credenciais em cache para as urls...
+$Global:PowerZabbix_AuthCache = @{
+		Credentials 	= @{}
+		LastURL			= $null
+		Named			= @{}
+	}
+	
+#Guarda as informações de conexão com o Zabbix na memória da sessão para uso com os outros comandos!
+#A url definida será marcada como last url...
+Function Set-ZabbixConnection([string]$url, $user = $null, $password = $null, $Name = $null) {
+	
+	if($Name -and !$url){
+		$url = GetNamedZabbixConnection $Name;
+		if(!$url){
+			throw 'NAME_NOT_FOUND: $Name';
+		}
+	}
+	
+	$Slot = Get-URLCache $url;
+	SetLastURL $url;
+	
+	if($User){
+		$Slot.user = $user;
+	}
+		
+	if($Password -ne $null){
+		$Slot.password = $password;
+	}
+	
+	if($Name -and $url){
+		SetNamedZabbixConnection -Name $Name -URL $url;
+	}
+}
+
+#Cria ou muda o valor de um slot nomeado no cache...
+Function SetNamedZabbixConnection([string]$Name, [string]$URL){
+	$NameTable = $Global:PowerZabbix_AuthCache.Named;
+	
+	if($NameTable.Contains($Name)){
+		$NameTable[$Name] = $URL;
+	} else {
+		$NameTable.add($Name,$URL);
+	}
+}
+
+#Obtém o valor da url de uma conexão nomeada...
+Function GetNamedZabbixConnection([string]$Name){
+	if($Global:PowerZabbix_AuthCache.Named.Contains($Name)){
+		return $Global:PowerZabbix_AuthCache.Named[$Name];
+	}
+}
+
+#Cria e obtém uma referencia para o cache slot da url...
+Function Get-URLCache([string]$URL) {
+	$Cache = $Global:PowerZabbix_AuthCache.Credentials;
+	if($Cache.Contains($URL)){
+		return $Cache[$URL];
+	} else {
+		$CacheSlot = @{user=$null;password=$null;lastAuth=$null};
+		$Cache.add($URL,$CacheSlot);
+		return $CacheSlot;
+	}
+}
 
 #Trata a resposta enviada pela API do zabbix.
 #Em caso de erros, uma expcetion será tratada. Caso contrário, um objeto contendo a resposta será retornado.
@@ -156,14 +231,6 @@ Function TranslateZabbixJson {
 	return $ZabbixResponseO.result;
 }
 
-
-#Guarda as informações de conexão com o Zabbix na memória da sessão para uso com os outros comandos!
-Function Set-ZabbixConnection($url, $user, $password) {
-	$Global:PowerZabbix_ZabbixUrl 		= $url
-	$Global:PowerZabbix_ZabbixUser 		= $user
-	$Global:PowerZabbix_ZabbixPassword 	= $password
-}
-
 #Gera um id para as requisições da api DO ZABBIX
 Function  GetNewZabbixApiId {
 	return [System.Guid]::NewGuid().Guid.ToString()
@@ -179,14 +246,35 @@ Function Auth-Zabbix {
 			,[switch]$Save = $null
 		)
 
+	#Obtém uma referencial local para o cache de autenticação...
+	$Cache = $Global:PowerZabbix_AuthCache;
+		
+	#Se não foi informada um URL, tenta obter a última utilizada...
+	if(!$URL){
+		write-verbose "Auth-Zabbix: Nenhuma URL fornecida... Tentando usar a última..."
+		$URL = GetLastURL;
+	}
+	
+	write-verbose "Auth-Zabbix: URL is: $URL";
+	$URLCache = Get-URLCache $URL;
+	
+	
+	#Se não foi informada um usuário, tenta consultar o cache...
 	
 	#Se o usuário não foi informado, então tenta obter do cache!
 	if(!$User){
-		$User 		= $Global:PowerZabbix_ZabbixUser
-		$Password 	= $Global:PowerZabbix_ZabbixPassword
+		write-verbose "Auth-Zabbix: Nenhum usuário informado, tentando obter do cache..."
 		
-		#Se ainda continuar sem usuário, pergunta para o usuário!
+		#Se o usuário existe no cache...
+		if($URLCache.user){
+			write-verbose "Auth-Zabbix: Usuário encontrado no cache para $URL!"
+			$User 		= $URLCache.User;
+			$Password 	= $URLCache.Password;
+		}
+		
+		#Se ainda não houver usuário, solicita um...
 		if(!$User){
+			write-verbose "Auth-Zabbix: Usuário não encontrado no cache... Solicitando credenciais..."
 			$Creds = Get-Credential
 			$NC = $Creds.GetNetworkCredential();
 			$User = $NC.UserName
@@ -194,21 +282,15 @@ Function Auth-Zabbix {
 		}
 	}
 	
-	if(!$URL){
-		if($Global:PowerZabbix_ZabbixUrl){
-			$URL = $Global:PowerZabbix_ZabbixUrl
-		} else {
-			$URL = Read-Host "Forneça a URL para o zabbix"
-		}
-	}
 	
-	write-verbose "Auth-Zabbix: URL is: $URL"
+	write-verbose "Auth-Zabbix: USerName: $User | Password: $($Password[0])******$($Password[$Password.Length-1])";
+	write-debug "Auth-Zabbix: Password: $PAssword";
 	
 	#Salva o usuário...
 	if($Save){
-		 $Global:PowerZabbix_ZabbixUser = $User;
-		 $Global:PowerZabbix_ZabbixPassword = $Password;
-		 $Global:PowerZabbix_ZabbixUrl = $URL;
+		write-verbose "Auth-Zabbix: Guardando informações no cache..."
+		$URLCache.User = $User;
+		$URLCache.Password = $Password;
 	}
 		
 		
@@ -218,8 +300,8 @@ Function Auth-Zabbix {
 							jsonrpc = "2.0"
 							method	= "user.login"
 							params =  @{
-										user 		= $User
-										password	= $Password
+										user 		= [string]$User
+										password	= [string]$Password
 									}
 							id = $NewId
 							auth = $null
@@ -228,29 +310,36 @@ Function Auth-Zabbix {
 	#Chama a Url
 	$resp = CallZabbixURL -data $AuthString -url $URL;
 	$resultado = TranslateZabbixJson $resp;
+	
 
 	if($resultado){
-		$Global:PowerZabbix_Auth = $resultado;
+		$URLCache.lastAuth = $resultado;
 		return;
 	}
 }
 
 #Obtém o token de autenticação se existe. Caso contrário, chama a função de auth!
 Function GetZabbixApiAuthToken {
-	if( $Global:PowerZabbix_Auth -and $Global:PowerZabbix_ZabbixUrl ){
-		return $Global:PowerZabbix_Auth;
+	write-verbose "GetZabbixApiAuthToken: Getting last used url..."
+	$LastURL 	= GetLastURL
+	$URLCache 	= Get-URLCache $LastURL;
+
+	if($URLCache.lastAuth){
+		write-verbose "GetZabbixApiAuthToken: last auth found  = $($URLCache.lastAuth)"
+		return $URLCache.lastAuth;
 	} else {
-		Auth-Zabbix -Save;
+		write-verbose "GetZabbixApiAuthToken: Requesting auth..."
+		Auth-Zabbix;
 		
-		if(!$Global:PowerZabbix_Auth){
+		if(!$URLCache.lastAuth){
 			throw 'INVALID_AUTH_TOKEN'
 			return;
 		}
 		
-		return $Global:PowerZabbix_Auth;
+		write-verbose "GetZabbixApiAuthToken: Auth = $($URLCache.lastAuth)"
+		return $URLCache.lastAuth;
 	}
 }
-
 
 #Retorna uma hashtable para ser usada na comunicação com a apu
 Function ZabbixAPI_NewParams {
@@ -271,6 +360,25 @@ Function ZabbixAPI_NewParams {
 	return $APIParams
 }
 
+#Ontém a última URL usada...
+Function GetLastURL {
+	$Cache = $Global:PowerZabbix_AuthCache;
+	
+	if($Cache.LastURL){
+		return $Cache.LastURL;
+	} else {
+		write-verbose "GetLastURL: NO last url, requesting new..."
+		$URL = Read-Host "Forneça a URL para o zabbix"
+		$Cache.LastURL = $URL;
+		return $Cache.LastURL;
+	}
+}
+
+Function SetLastURL {
+	param([string]$url)
+	$Cache = $Global:PowerZabbix_AuthCache;
+	$Cache.LastURL = $url;
+}
 
 #Função genérica usada para chamar o método get de diversos elementos!
 #Retorna uma hashtable contendo as informações baseadas no filtro!
@@ -757,6 +865,24 @@ Function UnixTime2LocalTime {
 					$r | Add-Member -Type Noteproperty -Name "datetime" -Value (UnixTime2LocalTime $r.clock)
 				}
 				
+				#Adiciona as informações da trigger...
+				if($r.object -eq 0 -and $r.relatedObject.description){
+					$r | Add-Member -Type Noteproperty -Name "TriggerName" -Value $r.relatedObject.description
+				}
+				
+				#Adiciona as informações da trigger...
+				if($r.object -eq 0 -and $r.relatedObject.priority){
+					$r | Add-Member -Type Noteproperty -Name "TriggerSeverity" -Value $r.relatedObject.priority
+				}
+				
+				#Adiciona as informações do host...
+				if($r.object -eq 0 -and $r.hosts.count -ge 1){
+					if($r.hosts[0].name){
+						$r | Add-Member -Type Noteproperty -Name "HostName" -Value $r.hosts[0].name
+					}
+					
+				}
+				
 				$ResultsObjects += $r;
 			}
 		}
@@ -764,6 +890,52 @@ Function UnixTime2LocalTime {
 		return $ResultsObjects;
 	}
 
+	#Equivalente ao método da API event.acknowledge
+	#https://www.zabbix.com/documentation/3.4/manual/api/reference/event/get
+	Function Ack-ZabbixEvent {
+		[CmdLetBinding(SupportsShouldProcess=$True)]
+		param(
+			[parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
+			[int]$EventId
+			,[string]$Message
+		)
+		
+		begin  {
+			[int[]]$EventsIds = @();
+		}
+		
+		process {
+			$EventsIds += $EventId;
+		}
+		
+		end {
+			[hashtable]$AckParams = @{eventids=$EventsIds;message=$Message};
+			[hashtable]$APIParams = ZabbixAPI_NewParams "event.acknowledge"
+			$APIParams.params = $AckParams;
+			$APIString = ConvertToJson $APIParams;
+			write-verbose "Ack-ZabbixEvent: APIString: $APIString";
+			
+			
+			#Chama a Url
+			
+			if($PSCmdLet.ShouldProcess("Events[$($EventsIds.count)]:$EventsIds")){
+				write-verbose 'Ack-ZabbixEvent: Calling url...'
+				$resp = CallZabbixURL -data $APIString;
+				$resultado = TranslateZabbixJson $resp;
+				write-verbose 'Ack-ZabbixEvent: Translatio finished...'
+			}
 
+			
+			$ResultsObjects = @();
+			if($resultado){
+				$resultado | %{
+					$ResultsObjects += NEw-Object PSObject -Prop $_;	
+				}
+			}
+
+			return $ResultsObjects;
+		}
+		
+	}
 	
 	
