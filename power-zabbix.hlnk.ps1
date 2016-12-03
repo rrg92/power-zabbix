@@ -35,7 +35,6 @@ Function LoadJsonEngine {
 Function ConvertToJson($o) {
 	LoadJsonEngine
 
-	
 	$jo=new-object system.web.script.serialization.javascriptSerializer
     return $jo.Serialize($o)
 }
@@ -50,6 +49,9 @@ Function ConvertFromJson([string]$json) {
 #Faz uma chamada para a API do zabbix!
 Function CallZabbixURL([object]$data = $null,$url = $null,$method = "POST", $contentType = "application/json-rpc"){
 	$ErrorActionPreference="Stop";
+	
+	write-verbose "URL param is: $Url";
+	
 	
 	try {
 		if($data -is [hashtable]){
@@ -174,6 +176,7 @@ Function Auth-Zabbix {
 			 $User 		= $null
 			,$Password	= $null
 			,$URL 		= $null
+			,[switch]$Save = $null
 		)
 
 	
@@ -189,6 +192,23 @@ Function Auth-Zabbix {
 			$User = $NC.UserName
 			$Password = $NC.Password;
 		}
+	}
+	
+	if(!$URL){
+		if($Global:PowerZabbix_ZabbixUrl){
+			$URL = $Global:PowerZabbix_ZabbixUrl
+		} else {
+			$URL = Read-Host "Forneça a URL para o zabbix"
+		}
+	}
+	
+	write-verbose "Auth-Zabbix: URL is: $URL"
+	
+	#Salva o usuário...
+	if($Save){
+		 $Global:PowerZabbix_ZabbixUser = $User;
+		 $Global:PowerZabbix_ZabbixPassword = $Password;
+		 $Global:PowerZabbix_ZabbixUrl = $URL;
 	}
 		
 		
@@ -206,7 +226,7 @@ Function Auth-Zabbix {
 						}
 						
 	#Chama a Url
-	$resp = CallZabbixURL -data $AuthString;
+	$resp = CallZabbixURL -data $AuthString -url $URL;
 	$resultado = TranslateZabbixJson $resp;
 
 	if($resultado){
@@ -217,10 +237,10 @@ Function Auth-Zabbix {
 
 #Obtém o token de autenticação se existe. Caso contrário, chama a função de auth!
 Function GetZabbixApiAuthToken {
-	if( $Global:PowerZabbix_Auth ){
+	if( $Global:PowerZabbix_Auth -and $Global:PowerZabbix_ZabbixUrl ){
 		return $Global:PowerZabbix_Auth;
 	} else {
-		Auth-Zabbix;
+		Auth-Zabbix -Save;
 		
 		if(!$Global:PowerZabbix_Auth){
 			throw 'INVALID_AUTH_TOKEN'
@@ -270,6 +290,17 @@ Function ZabbixAPI_Get {
 	if($APIParams.common.startSearch){
 		$Options.params.add("startSearch", $true);
 	}
+	
+	
+	if($APIParams.common.limit){
+		$Options.params.add("limit", $APIParams.common.limit);
+	}
+	
+	
+	if($APIParams.common.output){
+		$Options.params.add("output", $APIParams.common.output);
+	}
+	
 				
 	#Determinando se iremos usar search ou filter pra buscar...
 	if($APIParams.common.search){
@@ -277,7 +308,8 @@ Function ZabbixAPI_Get {
 		$Options.params.add("search",@{
 									name = $APIParams.props.name
 							});
-	} else {
+	} 
+	elseif($APIParams.props.name) {
 		$Options.params.add("filter",@{
 									name = $APIParams.props.name
 							});
@@ -286,7 +318,40 @@ Function ZabbixAPI_Get {
 	return;
 }
 
+#Converte uma lista de valores para ids!
+Function ZabbixAPI_List2Ids {
+	param($SourceList, [scriptblock]$NamesToId)
 
+	$Ids = @();
+	$Names = @();
+	
+	$SourceList | %{
+		if($_ -as [int]){
+			$Ids += [int]$_;
+		} else {
+			$Names += $_.toString()
+		}
+	}
+	
+	if($Names){
+		$Ids += & $NamesToId $Names;
+	}
+	
+	return $Ids;
+}
+
+#Converte um datetime para um unixtimestamp!
+Function Datetime2Unix {
+	param([datetime]$Datetime)
+	
+	return $Datetime.toUniversalTime().Subtract([datetime]'1970-01-01').totalSeconds;
+}
+
+Function UnixTime2LocalTime {
+	param([uint32]$unixts)
+	
+	return ([datetime]'1970-01-01').toUniversalTime().addSeconds($unixts).toLocalTime();
+}
 
 ############# Aux cmdlets ###############
 #######Cmdlets auxiliares que podem ser usados para facilitar a interação com a API, mas que não são implementações da mesma!################
@@ -341,7 +406,8 @@ Function ZabbixAPI_Get {
 		
 	}
 
-
+	
+	
 ############# API cmdlets ###############
 #######API implementations. A partir daqui, segue as implementações da API################
 
@@ -355,6 +421,7 @@ Function ZabbixAPI_Get {
 			,[switch]$Search 	   = $false
 			,[switch]$SearchByAny  = $false
 			,[switch]$StartSearch  = $false
+			,$output				= $null
 		)
 
 				
@@ -365,6 +432,7 @@ Function ZabbixAPI_Get {
 							search 		= $Search 
 							searchByAny = $SearchByAny
 							startSearch = $StartSearch
+							output		= $output
 						}
 						
 					props = @{
@@ -390,7 +458,7 @@ Function ZabbixAPI_Get {
 
 
 	#Equivalente ao método da API host.create
-	#https://www.zabbix.com/documentation/3.4/manual/api/reference/hostgroup/get
+	#https://www.zabbix.com/documentation/3.4/manual/api/reference/hostgroup/create
 	Function Create-ZabbixHost {
 		[CmdLetBinding()]
 		param(
@@ -448,16 +516,17 @@ Function ZabbixAPI_Get {
 	}
 
 
-######### HOSTGROUP
+######### HOSTGROUP	
 	#Equivalente ao método da API hostgroup.get
 	#https://www.zabbix.com/documentation/3.4/manual/api/reference/hostgroup/get
 	Function Get-ZabbixHostGroup {
 		[CmdLetBinding()]
 		param(
-			$Name = @()
+			[string[]]$Name = @()
 			,[switch]$Search 	   = $false
 			,[switch]$SearchByAny  = $false
 			,[switch]$StartSearch  = $false
+			,$Output			   = $null
 		)
 
 				
@@ -468,13 +537,58 @@ Function ZabbixAPI_Get {
 							search 		= $Search 
 							searchByAny = $SearchByAny
 							startSearch = $StartSearch
+							output		= $output
 						}
 						
 					props = @{
 						name = $Name 
 					}
-				}		
+				}
+		
+		write-verbose "Get-ZabbixHostGroup: APIParams, before convert $APIParams"
 		$APIString = ConvertToJson $APIParams;
+		write-verbose "Get-ZabbixHostGroup: APIString, before convert $APISTring"
+							
+		#Chama a Url
+		write-verbose "Get-ZabbixHostGroup:  calling zabbix url function..."
+		$resp = CallZabbixURL -data $APIString;
+		write-verbose "Get-ZabbixHostGroup:  response received! Calling translate..."
+		$resultado = TranslateZabbixJson $resp;
+		write-verbose "Get-ZabbixHostGroup:  Translated!"
+		
+		write-verbose "Get-ZabbixHostGroup: Building result objexts..."
+		$ResultsObjects = @();
+		if($resultado){
+			$resultado | %{
+				$ResultsObjects += NEw-Object PSObject -Prop $_;	
+			}
+		}
+
+		return $ResultsObjects;
+	}
+
+	#Equivalente ao método da API hosgroup.create
+	#https://www.zabbix.com/documentation/3.4/manual/api/reference/hostgroup/create
+	Function Create-ZabbixHostGroup {
+		[CmdLetBinding()]
+		param(
+			[string[]]$Name
+		)
+
+		
+		$APIPArams = ZabbixAPI_NewParams "hostgroup.create";
+		
+		$AllHostGroups = @();
+		
+		$Name | %{
+			$AllHostGroups += @{name = [string]$_};
+		}
+		
+		$APIParams.params = $AllHostGroups;
+		
+		
+		$APIString = ConvertToJson $APIParams;
+		write-verbose "Create-ZabbixHostGroup: APIString: $APIString"
 							
 		#Chama a Url
 		$resp = CallZabbixURL -data $APIString;
@@ -536,6 +650,120 @@ Function ZabbixAPI_Get {
 	}
 
 
-	
+######### EVENT
+	#Equivalente ao método da API event.get
+	#https://www.zabbix.com/documentation/3.4/manual/api/reference/event/get
+	Function Get-ZabbixEvent {
+		[CmdLetBinding()]
+		param(
+			$Hosts 	= @()		
+			,$Groups  = @()
+			,$TimeFrom 	= $null
+			,$TimeTill	= $null
+			
+			,
+				[ValidateSet("trigger","discovered host","discovered service","auto-registered host","item","LLD rule",0,1,2,3,4,5)]
+				$Object				= $null
+				
+			,$Value					= '1' #PROBLEM
+			,$selectHosts 			= $null
+			,$selectRelatedObject	= $null
+			,	
+				[Alias("selectAcks")]
+				$selectAcknowledges	= $null
+				
+			,$limit					= $null
+		)
+
+				
+		#Determinando searchByAny
+		[hashtable]$APIParams = ZabbixAPI_NewParams "event.get"
+		ZabbixAPI_Get $APIParams -APIParams @{
+					common = @{
+							search 		= $false 
+							searchByAny = $false
+							startSearch = $false
+							limit		= $limit
+						}
+				}
+				
+		if($TimeFrom){
+			$APIParams.params.add("time_from", [string](Datetime2Unix $TimeFrom) ); 
+		}
+		
+		if($TimeTill){
+			$APIParams.params.add("time_till", [string](Datetime2Unix $TimeTill) ); 
+		}
+		
+		if($Hosts){
+			write-verbose "Get-ZabbixEvent: Castings groups to hosts ids..."
+			[int[]]$HostIds = ZabbixAPI_List2Ids $Hosts { param($HostNames) Get-ZabbixHost -Name $HostNames -output @('hostid') | %{$_.hostid}};
+			$APIParams.params.add("hostids", $HostsIds);
+			write-verbose "Get-ZabbixEvent: Hosts add casted sucessfully!"
+		}
+		
+		if($Groups){
+			write-verbose "Get-ZabbixEvent: Castings groups to groups ids..."
+			[int[]]$GroupIds = ZabbixAPI_List2Ids $Groups { param($GroupNames) Get-ZabbixHostGroup -Name $GroupNames -Output @('groupid') | %{$_.groupid} };
+			$APIParams.params.add("groupids", $GroupIds);
+			write-verbose "Get-ZabbixEvent: Groups add casted sucessfully!"
+		}
+		
+		if($selectAcknowledges){
+			$APIParams.params.add("select_acknowledges", $selectAcknowledges);
+		}
+		
+		
+		if($Object){
+			if($Object -is [string]){
+				$i = 0;
+				
+				$Object = 'trigger','discovered host','discovered service','auto-registered host','item','LLD rule' | ?{
+					if($_ -eq $Object){
+						return $true;
+					} else {
+						$i++;return $false;
+					}
+				} | %{$i}
+			}
+		
+			$APIParams.params.add("object", $object )
+		}
+		
+		if($selectHosts){
+			$APIParams.params.add("selectHosts", $selectHosts);
+		}
+		
+		if($selectRelatedObject){
+			$APIParams.params.add("selectRelatedObject", $selectRelatedObject);
+		}
+				
+		write-verbose "Get-ZabbixEvent: About to generate json from apiparams!"
+		$APIString = ConvertToJson $APIParams;
+		write-verbose "JSON is: $APIString";
+		
+		#Chama a Url
+		$resp = CallZabbixURL -data $APIString;
+		$resultado = TranslateZabbixJson $resp;
+		
+		
+		$ResultsObjects = @();
+		if($resultado){
+			$resultado | %{
+				$r = NEw-Object PSObject -Prop $_;
+				
+				#Adiciona o datetime local...
+				if($r | gm "clock"){
+					$r | Add-Member -Type Noteproperty -Name "datetime" -Value (UnixTime2LocalTime $r.clock)
+				}
+				
+				$ResultsObjects += $r;
+			}
+		}
+
+		return $ResultsObjects;
+	}
+
+
 	
 	
