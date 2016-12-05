@@ -36,12 +36,14 @@ Function ConvertToJson($o) {
 	LoadJsonEngine
 
 	$jo=new-object system.web.script.serialization.javascriptSerializer
+	$jo.maxJsonLength=[int32]::maxvalue;
     return $jo.Serialize($o)
 }
 
 Function ConvertFromJson([string]$json) {
 	LoadJsonEngine
 	$jo=new-object system.web.script.serialization.javascriptSerializer
+	$jo.maxJsonLength=[int32]::maxvalue;
     return $jo.DeserializeObject($json)
 }
 
@@ -110,12 +112,17 @@ Function CallZabbixURL([object]$data = $null,$url = $null,$method = "POST", $con
 			write-verbose "CallZabbixURL: Getting response stream..."
 			$ResponseStream  = $HttpResp.GetResponseStream();
 			
+			write-verbose "CallZabbixURL: Response stream size: $($ResponseStream.Length) bytes"
+			
 			$IO = New-Object System.IO.StreamReader($ResponseStream);
 			
 			write-verbose "CallZabbixURL: Reading response stream...."
 			$responseString = $IO.ReadToEnd();
+			
 		}
 		
+		
+		write-verbose "CallZabbixURL: Response String size: $($responseString.length) characters! "
 		return $responseString;
 	} catch {
 		throw "ERROR_CALLING_ZABBIX_URL: $_";
@@ -428,7 +435,7 @@ Function ZabbixAPI_Get {
 
 #Converte uma lista de valores para ids!
 Function ZabbixAPI_List2Ids {
-	param($SourceList, [scriptblock]$NamesToId)
+	param($SourceList, [scriptblock]$NamesToId, [switch]$NoValidate = $false)
 
 	$Ids = @();
 	$Names = @();
@@ -442,7 +449,25 @@ Function ZabbixAPI_List2Ids {
 	}
 	
 	if($Names){
-		$Ids += & $NamesToId $Names;
+		#NameToId must return a array of objects, where each object contains id of entity and the associated name in name property.
+		$Founded += & $NamesToId $Names;
+		
+		if(!$NoValidate){
+			#Gera um array com a lista de nomes encontrados...
+			$NamesFound = @($Founded | %{$_.name});
+			
+			#Obtém os nomes que não foram encontrados...
+			$NamesNotFound  = @();
+			$NamesNotFound = $SourceList | ? {  $NamesFound  -NotContains $_  } | %{$_};
+			
+			if($NamesNotFound){
+				throw "NAMES_NOT_FOUND: $NamesNotFound"
+			}
+		}
+		
+		$Ids += $Founded | %{$_.id}
+		
+		
 	}
 	
 	return $Ids;
@@ -672,6 +697,8 @@ Function UnixTime2LocalTime {
 			}
 		}
 
+		write-verbose "Get-ZabbixHostGroup: Objects generated = $ResultsObjects.count"
+		
 		return $ResultsObjects;
 	}
 
@@ -781,6 +808,7 @@ Function UnixTime2LocalTime {
 				$selectAcknowledges	= $null
 				
 			,$limit					= $null
+			,$acknowledged			= $null
 		)
 
 				
@@ -805,15 +833,41 @@ Function UnixTime2LocalTime {
 		
 		if($Hosts){
 			write-verbose "Get-ZabbixEvent: Castings groups to hosts ids..."
-			[int[]]$HostIds = ZabbixAPI_List2Ids $Hosts { param($HostNames) Get-ZabbixHost -Name $HostNames -output @('hostid') | %{$_.hostid}};
+			[int[]]$HostIds = ZabbixAPI_List2Ids $Hosts { 
+													param($HostNames) 
+													
+													$Found = @();
+													Get-ZabbixHost -Name $HostNames -output @('hostid','name') | %{
+														New-Object PSObject -Prop @{id=$_.hostid;name=$_.name};
+													}
+													
+													return $Found;
+													
+												};
 			$APIParams.params.add("hostids", $HostsIds);
 			write-verbose "Get-ZabbixEvent: Hosts add casted sucessfully!"
 		}
 		
 		if($Groups){
 			write-verbose "Get-ZabbixEvent: Castings groups to groups ids..."
-			[int[]]$GroupIds = ZabbixAPI_List2Ids $Groups { param($GroupNames) Get-ZabbixHostGroup -Name $GroupNames -Output @('groupid') | %{$_.groupid} };
-			$APIParams.params.add("groupids", $GroupIds);
+			[int[]]$GroupIds = ZabbixAPI_List2Ids $Groups { 
+														param($GroupNames) 
+														
+														$Found = @();
+														
+														$Found = Get-ZabbixHostGroup -Name $GroupNames -Output @('groupid','name') | %{
+															New-Object PSObject -Prop @{id=$_.groupid;name=$_.name};
+														}
+														
+														return $FOund;
+													};			
+			
+			if($GroupIDs){
+				$APIParams.params.add("groupids", $GroupIds);
+			} else {
+				throw "GROUPS_NOT_FOUND: $Groups";
+			}	
+			
 			write-verbose "Get-ZabbixEvent: Groups add casted sucessfully!"
 		}
 		
@@ -821,6 +875,9 @@ Function UnixTime2LocalTime {
 			$APIParams.params.add("select_acknowledges", $selectAcknowledges);
 		}
 		
+		if($acknowledged -ne $null){
+			$APIParams.params.add("acknowledged", [bool]$acknowledged);
+		}
 		
 		if($Object){
 			if($Object -is [string]){
