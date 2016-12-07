@@ -32,12 +32,32 @@ Function LoadJsonEngine {
 
 }
 
+
+#Troca caracteres não-unicode por um \u + codigo!
+#Solucao adapatada da resposta do Douglas em: http://stackoverflow.com/a/25349901/4100116
+Function EscapeNonUnicodeJson {
+	param([string]$Json)
+	
+	$Replacer = {
+		param($m)
+		
+		return [string]::format('\u{0:x4}', [int]$m.Value[0] )
+	}
+	
+	$RegEx = [regex]'[^\x00-\x7F]';
+	write-verbose "EscapeNonUnicodeJson: Original Json: $Json";
+	$ReplacedJSon = $RegEx.replace( $Json, $Replacer)
+	write-verbose "EscapeNonUnicodeJson: NonUnicode Json: $ReplacedJson";
+	return $ReplacedJSon;
+}
+
+
 Function ConvertToJson($o) {
 	LoadJsonEngine
 
 	$jo=new-object system.web.script.serialization.javascriptSerializer
 	$jo.maxJsonLength=[int32]::maxvalue;
-    return $jo.Serialize($o)
+    return EscapeNonUnicodeJson ($jo.Serialize($o))
 }
 
 Function ConvertFromJson([string]$json) {
@@ -61,6 +81,8 @@ Function CallZabbixURL([object]$data = $null,$url = $null,$method = "POST", $con
 			$data = ConvertToJson $data;
 		}
 		
+		write-verbose "CalZabbixURL: json that will be send is: $data"
+		
 		#Checando cache...
 		$Cache = $Global:PowerZabbix_AuthCache;
 		if(!$URL){
@@ -83,6 +105,8 @@ Function CallZabbixURL([object]$data = $null,$url = $null,$method = "POST", $con
 			
 			$url += "api_jsonrpc.php"
 		}
+		
+		
 		
 
 		write-verbose "CallZabbixURL: Creating WebRequest method... Url: $url. Method: $Method ContentType: $ContentType";
@@ -109,6 +133,7 @@ Function CallZabbixURL([object]$data = $null,$url = $null,$method = "POST", $con
 		$responseString  = $null;
 		
 		if($HttpResp){
+			write-verbose "CallZabbixURL: charset: $($HttpResp.CharacterSet) encoding: $($HttpResp.ContentEncoding). ContentType: $($HttpResp.ContentType)"
 			write-verbose "CallZabbixURL: Getting response stream..."
 			$ResponseStream  = $HttpResp.GetResponseStream();
 			
@@ -119,6 +144,7 @@ Function CallZabbixURL([object]$data = $null,$url = $null,$method = "POST", $con
 			write-verbose "CallZabbixURL: Reading response stream...."
 			$responseString = $IO.ReadToEnd();
 			
+			write-verbose "CalZabbixURL: response json is: $responseString"
 		}
 		
 		
@@ -791,7 +817,8 @@ Function UnixTime2LocalTime {
 	Function Get-ZabbixEvent {
 		[CmdLetBinding()]
 		param(
-			$Hosts 	= @()		
+			 [int]$Id	= @()
+			,$Hosts 	= @()		
 			,$Groups  = @()
 			,$TimeFrom 	= $null
 			,$TimeTill	= $null
@@ -822,6 +849,10 @@ Function UnixTime2LocalTime {
 							limit		= $limit
 						}
 				}
+				
+		if($Id){
+			$APIParams.params.add("eventids", $Id ); 
+		}
 				
 		if($TimeFrom){
 			$APIParams.params.add("time_from", [string](Datetime2Unix $TimeFrom) ); 
