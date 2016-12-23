@@ -124,11 +124,22 @@ Function CallZabbixURL([object]$data = $null,$url = $null,$method = "POST", $con
 		
 		write-verbose "CallZabbixURL: Getting request stream...."
 		$RequestStream = $Web.GetRequestStream();
-		$RequestStream.Write($bytes, 0, $bytes.length);
+		
+		
+		try {
+			write-verbose "CallZabbixURL: Writing bytes to the request stream...";
+			$RequestStream.Write($bytes, 0, $bytes.length);
+		} finally {
+			write-verbose "CallZabbixURL: Disposing the request stream!"
+			$RequestStream.Dispose() #This must be called after writing!
+		}
+		
 		
 		
 		write-verbose "CallZabbixURL: Making http request... Waiting for the response..."
 		$HttpResp = $Web.GetResponse();
+		
+		
 		
 		$responseString  = $null;
 		
@@ -817,7 +828,7 @@ Function UnixTime2LocalTime {
 	Function Get-ZabbixEvent {
 		[CmdLetBinding()]
 		param(
-			 [int]$Id	= @()
+			 [int[]]$Id	= @()
 			,$Hosts 	= @()		
 			,$Groups  = @()
 			,$TimeFrom 	= $null
