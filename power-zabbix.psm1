@@ -577,21 +577,69 @@ Function UnixTime2LocalTime {
 	}
 
 	
+	#Converts a lot of groups names to respectiv ids!
+	#The returned object is a array of hashtable containing the groupid key.
+	Function ConvertGroupNames2Ids {
+		param($Names)
+		
+		write-verbose "ConvertGroupNames2Ids: Castings groups to groups ids..."
+		[int[]]$GroupIds = ZabbixAPI_List2Ids $Names { 
+													param($GroupNames) 
+													
+													$Found = @();
+													
+													$Found = Get-ZabbixHostGroup -Name $GroupNames -Output @('groupid','name') | %{
+														New-Object PSObject -Prop @{id=$_.groupid;name=$_.name};
+													}
+													
+													return $Found;
+												};			
+		
+		if($GroupIDs){
+			 $GroupIDs | %{
+				$NewGroups += @{groupid = [int]$_};
+			 }
+		} else {
+			throw "GROUPS_NOT_FOUND: $Groups";
+		}	
+		
+		write-verbose "ConvertGroupNames2Ids: Groups add casted sucessfully!";
+		return $NewGroups;
+	}
+	
 	
 ############# API cmdlets ###############
 #######API implementations. A partir daqui, segue as implementações da API################
 
 ######### HOST
+	
+	#Get a host object, that represent a host!
+	#Based on: https://www.zabbix.com/documentation/3.4/manual/api/reference/host/object#host
+	Function Get-ZabbixHostObject {
+		[CmdLetBinding()]
+		param()
+		
+		return New-Object PsObject -Prop @{
+			hostid = [string]$null
+			host = [string]$null
+			name = [string]$null
+			status = [int]$null
+		}
+		
+	}
+
 	#Equivalente ao método da API host.get
 	#https://www.zabbix.com/documentation/3.4/manual/api/reference/host/get
 	Function Get-ZabbixHost {
 		[CmdLetBinding()]
 		param(
-			$Name = @()
+			 [int[]]$Id = @()
+			,[string[]]$Name = @()
 			,[switch]$Search 	   = $false
 			,[switch]$SearchByAny  = $false
 			,[switch]$StartSearch  = $false
 			,$output				= $null
+			,$SelectGroups 			= $false
 		)
 
 				
@@ -608,9 +656,19 @@ Function UnixTime2LocalTime {
 					props = @{
 						name = $Name 
 					}
-				}		
+				}
+
+		if($Id){
+			$APIParams.params.add("hostids", $Id)
+		}
+				
+		if($SelectGroups){
+			$APIParams.params.add("selectGroups", $SelectGroups)
+		}
+				
+		#Builds the JSON string!
 		$APIString = ConvertToJson $APIParams;
-							
+						
 		#Chama a Url
 		$resp = CallZabbixURL -data $APIString;
 		$resultado = TranslateZabbixJson $resp;
@@ -686,6 +744,108 @@ Function UnixTime2LocalTime {
 	}
 
 
+	#Equivalent to the method host.update.
+	#In addition, added the option "Append". This option not exist in original API and is just a facility provided by this module.
+	#https://www.zabbix.com/documentation/3.4/manual/api/reference/host/update
+	#You must pipe this from result of Get-ZabbixHost in order to use them.
+	Function Update-ZabbixHost {
+		[CmdLetBinding(SupportsShouldProcess=$True)]
+		param(
+			$Groups = $null
+			
+			,#If specified, the cmdlet will get existent groups and add to the list informed!
+				[switch]$Append = $false
+				
+			,#If piped with Get-Zabibx host, get the returned object from it!
+			 #Note that this cmdlet expects a object returned by Get-Zabbixhost cmdlet!
+				[Parameter(ValueFromPipeline=$true, Mandatory=$true)]
+				$ZabbixHost
+		)
+
+		begin {
+			$AllHosts = @{};
+			[int[]]$NewGroups = @();
+			
+			#If groups was specified, convert it to group names...
+			if($Groups){
+				write-verbose "Update-ZabbixHost: About to convert group names to ids"
+				[hashtable[]]$NewsGroup = ConvertGroupNames2Ids $Groups;
+			}
+		
+		
+		}
+		
+		process {
+			if($ZabbixHost){
+				#Converts the object to a hashtable in order to avoid circular reference problem...
+				$ObjectHashTable = @{};
+				$ZabbixHost.psobject.properties | %{ $ObjectHashTable.add($_.Name,$ZabbixHost.psobject.properties[$_.Name].Value)  };
+				
+				#Add the groupids property if exists...
+				if($NewsGroup){
+					$ObjectHashTable.add("groups",$NewsGroup)
+				}
+				
+				$AllHosts.add($ZabbixHost.hostid, $ObjectHashTable);
+			} else {
+				throw "INVALID_ZABBIX_HOST"
+			}
+		}
+		
+		end {
+		
+			#If appends specified, gets the groups for the hosts...
+			if($Append){
+				#Gets the groups for each host id!
+				$Ids = $AllHosts.Values | %{$_.hostid};
+				$HostInfo = Get-ZabbixHost -SelectGroups @("groupid") -Id $Ids -Output @("hostid");
+				
+				#Adds groups for each host!
+				$HostInfo | %{
+					$CurrentHost = $AllHosts[$_.hostid];
+					$CurrentGroups = $_.groups;
+					
+					$CurrentHost.groups += @( $CurrentGroups | %{ @{groupid=$_.groupid}  }  )
+				}
+				
+			}
+		
+		
+			$APIParams = ZabbixAPI_NewParams "host.update";
+			$APIParams.params = @($AllHosts.Values);
+			
+			write-verbose "Update-ZabbixHost: APIParams, before convert $APIParams"
+			$APIString = ConvertToJson $APIParams;
+			write-verbose "Update-ZabbixHost: APIString, before convert $APISTring"
+			
+			#Chama a Url
+			$ConfirmMsg = @(
+				"Hosts to be updated: $($AllHosts.count)"
+				"JSON: "+(ConvertToJson @($AllHosts.Values))
+			) -Join "`r`n"
+
+			
+			
+			
+			if($PSCmdLet.ShouldProcess($ConfirmMsg)){
+				$resp = CallZabbixURL -data $APIString;
+				$resultado = TranslateZabbixJson $resp;
+			}
+			
+			
+			
+			$ResultsObjects = @();
+			if($resultado){
+				$resultado | %{
+					$ResultsObjects += NEw-Object PSObject -Prop $_;	
+				}
+			}
+
+			return $ResultsObjects;
+		}
+	}
+
+	
 ######### HOSTGROUP	
 	#Equivalente ao método da API hostgroup.get
 	#https://www.zabbix.com/documentation/3.4/manual/api/reference/hostgroup/get
