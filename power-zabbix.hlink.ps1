@@ -368,6 +368,8 @@ $ErrorActionPreference= "Stop";
 			,$APIParams = @{}
 		)
 		
+		$Options.params.add("filter",@{});
+		
 		#Determinando searchByAny
 		if($APIParams.common.searchByAny){
 			$Options.params.add("searchByAny", $true);
@@ -396,9 +398,7 @@ $ErrorActionPreference= "Stop";
 								});
 		} 
 		elseif($APIParams.props.name) {
-			$Options.params.add("filter",@{
-										name = $APIParams.props.name
-								});
+			$Options.params.filter["name"] = $APIParams.props.name
 		}
 		
 		return;
@@ -878,6 +878,44 @@ $ErrorActionPreference= "Stop";
 	}
 
 	
+	#Converts a lot of host names to respectiv ids!
+	#The returned object is a array of hashtable containing the hostid key.
+	Function ConvertHostNames2Ids {
+		param($Names, [switch]$ReturnNames = $false)
+		
+		write-verbose "ConvertHostNames2Ids: Castings groups to groups ids..."
+		$HostIds = ZabbixAPI_List2Ids $Names { 
+													param($HostNames) 
+													
+													$Found = @();
+													
+													$Found = Get-ZabbixHost -Name $HostNames -Output @('hostid','name') | %{
+														New-Object PSObject -Prop @{id=$_.hostid;name=$_.name};
+													}
+													
+													return $Found;
+												};			
+		
+		$NewGroups = @();
+		if($HostIds){
+			 $HostIds | %{
+				$NewId = @{hostid = [int]$_.id};
+				
+				if($ReturnNames){
+					$NewId['name'] = $_.name;
+				}
+				
+				$NewGroups += $NewId;
+			 }
+		} else {
+			throw "GROUPS_NOT_FOUND: $Names";
+		}	
+		
+		write-verbose "ConvertHostNames2Ids: Hosts add casted sucessfully!";
+		return $NewGroups;
+	}
+	
+	
 	#Converts a lot of groups names to respectiv ids!
 	#The returned object is a array of hashtable containing the groupid key.
 	Function ConvertGroupNames2Ids {
@@ -984,6 +1022,8 @@ $ErrorActionPreference= "Stop";
 			,[switch]$StartSearch  = $false
 			,$output				= $null
 			,$SelectGroups 			= $false
+			,$SelectInterfaces		= $false
+			,$HostStatus			= $null
 		)
 
 				
@@ -995,6 +1035,7 @@ $ErrorActionPreference= "Stop";
 							searchByAny = $SearchByAny
 							startSearch = $StartSearch
 							output		= $output
+							"filter"	= $filter
 						}
 						
 					props = @{
@@ -1008,6 +1049,14 @@ $ErrorActionPreference= "Stop";
 				
 		if($SelectGroups){
 			$APIParams.params.add("selectGroups", $SelectGroups)
+		}
+		
+		if($SelectInterfaces){
+			$APIParams.params.add("selectInterfaces", $SelectInterfaces)
+		}
+		
+		if($HostStatus -ne $null){
+			$APIParams.params.filter.add("status", ([int]$HostStatus) )
 		}
 		
 		#If groups was specified, convert it to group names...
@@ -1441,42 +1490,18 @@ $ErrorActionPreference= "Stop";
 			}
 			
 			if($Hosts){
-				write-verbose "Get-ZabbixEvent: Castings groups to hosts ids..."
-				[int[]]$HostIds = ZabbixAPI_List2Ids $Hosts { 
-														param($HostNames) 
-														
-														$Found = @();
-														Get-ZabbixHost -Name $HostNames -output @('hostid','name') | %{
-															New-Object PSObject -Prop @{id=$_.hostid;name=$_.name};
-														}
-														
-														return $Found;
-														
-													};
-				$APIParams.params.add("hostids", $HostsIds);
-				write-verbose "Get-ZabbixEvent: Hosts add casted sucessfully!"
+				write-verbose "Get-ZabbixEvent: Castings hosts to groups ids..."
+				[hashtable[]]$HostsIds = ConvertHostNames2Ids $Hosts;
+				[int[]]$hostids = @($HostsIds | %{$_.hostid});
+				$APIParams.params.add("hostids", $hostids )
+				write-verbose "Get-ZabbixEvent: Groups add casted sucessfully!"
 			}
 			
 			if($Groups){
 				write-verbose "Get-ZabbixEvent: Castings groups to groups ids..."
-				[int[]]$GroupIds = ZabbixAPI_List2Ids $Groups { 
-															param($GroupNames) 
-															
-															$Found = @();
-															
-															$Found = Get-ZabbixHostGroup -Name $GroupNames -Output @('groupid','name') | %{
-																New-Object PSObject -Prop @{id=$_.groupid;name=$_.name};
-															}
-															
-															return $FOund;
-														};			
-				
-				if($GroupIDs){
-					$APIParams.params.add("groupids", $GroupIds);
-				} else {
-					throw "GROUPS_NOT_FOUND: $Groups";
-				}	
-				
+				[hashtable[]]$GroupsID = ConvertGroupNames2Ids $Groups;
+				[int[]]$groupsids = @($GroupsID | %{$_.groupid});
+				$APIParams.params.add("groupids", $groupsids )
 				write-verbose "Get-ZabbixEvent: Groups add casted sucessfully!"
 			}
 			
@@ -1661,6 +1686,252 @@ $ErrorActionPreference= "Stop";
 
 		write-verbose "Get-ZabbixMap: Objects generated = $ResultsObjects.count"
 		
+		return $ResultsObjects;
+	}
+
+######### ITEM	
+
+	#Equivalente ao método da API item.get
+	#https://www.zabbix.com/documentation/2.0/manual/appendix/api/item/get
+	Function Get-ZabbixItem {
+		[CmdLetBinding()]
+		param(
+			 $name = $null
+			,[int[]]$Id				= @()
+			,$Hosts 				= @()		
+			,$Groups  				= @()
+			,$selectHosts 			= $null
+			,$selectTriggers		= $null
+			,$limit					= $null
+			,[switch]$Search 	   = $false
+			,[switch]$SearchByAny  = $false
+			,[switch]$StartSearch  = $false
+			,$output				= $null
+		)
+
+		
+	
+		#Determinando searchByAny
+		[hashtable]$APIParams = ZabbixAPI_NewParams "item.get"
+		ZabbixAPI_Get $APIParams -APIParams @{
+					common = @{
+							search 		= $Search 
+							searchByAny = $SearchByAny
+							startSearch = $StartSearch
+							limit		= $limit
+							output		= $output
+						}
+						
+						
+					props = @{
+						name = $Name 
+					}
+				}
+
+			
+		
+		if($Id){
+			$APIParams.params.add("itemids", $Id ); 
+		}
+		
+		if($Hosts){
+			$NamesToConvert = @();
+			[int[]]$hostids =  $Hosts | %{
+				if($_.hostid){
+					return $_.hostid;
+				} else {
+					if ($_ -is [string]){
+						$NamesToConvert += $_;
+					} else {
+						return [int]$_;
+					}
+				}
+			}
+			
+			if($NamesToConvert){
+				write-verbose "Get-ZabbixItem: Castings hosts to groups ids..."
+				[hashtable[]]$ConvertedHosts = ConvertHostNames2Ids $NamesToConvert;
+				$hostids += @($ConvertedHosts | %{$_.hostid});
+			}
+		
+			$APIParams.params.add("hostids", $hostids )
+			write-verbose "Get-ZabbixItem: Groups add casted sucessfully!"
+		}
+		
+		if($Groups){
+			$NamesToConvert = @();
+			[int[]]$groupsids =  $Groups | %{
+				if($_.groupid){
+					return $_.groupid;
+				} else {
+					if ($_ -is [string]){
+						$NamesToConvert += $_;
+					} else {
+						return [int]$_;
+					}
+				}
+			}
+			
+			if($NamesToConvert){
+				write-verbose "Get-ZabbixItem: Castings hosts to groups ids..."
+				[hashtable[]]$ConvertedGroups = ConvertGroupNames2Ids $NamesToConvert;
+				$groupsids += @($ConvertedGroups | %{$_.groupid});
+			}
+		
+			$APIParams.params.add("groupids", $groupsids )
+			write-verbose "Get-ZabbixItem: Groups add casted sucessfully!"
+		}
+
+		
+		if($selectHosts){
+			$APIParams.params.add("selectHosts", $selectHosts);
+		}
+		
+		if($selectTriggers){
+			$APIParams.params.add("selectTriggers", $selectTriggers);
+		}
+				
+
+			
+		write-verbose "Get-ZabbixItem: About to generate json from apiparams!"
+		$APIString = ConvertToJson $APIParams;
+		write-verbose "JSON is: $APIString";
+		
+		#Chama a Url
+		$resp = CallZabbixURL -data $APIString;
+		$resultado = TranslateZabbixJson $resp;
+		
+		
+		$ResultsObjects = @();
+		if($resultado){
+			$resultado | %{
+				$r = NEw-Object PSObject -Prop $_;
+				
+				#Adiciona o datetime local...
+				if($r | gm "clock"){
+					$r | Add-Member -Type Noteproperty -Name "datetime" -Value (UnixTime2LocalTime $r.clock)
+				}
+				
+				$ResultsObjects += $r;
+			}
+		}
+
+		return $ResultsObjects;
+	}
+	
+######### HISTORY	
+	#Equivalente ao método da API history.get
+	#https://www.zabbix.com/documentation/2.0/manual/appendix/api/history/get
+	Function Get-ZabbixHistory {
+		[CmdLetBinding()]
+		param(
+			 [int]$history 	= $null
+			,$Hosts 	= @()		
+			,$Items		= @()
+			,$TimeFrom 	= $null
+			,$TimeTill	= $null
+			,$limit		= $null
+		)
+
+		
+		#Determinando searchByAny
+		[hashtable]$APIParams = ZabbixAPI_NewParams "history.get"
+		ZabbixAPI_Get $APIParams -APIParams @{
+					common = @{
+							search 		= $false 
+							searchByAny = $false
+							startSearch = $false
+							limit		= $limit
+						}
+				}
+					
+		if($TimeFrom){
+			[string]$TimeFromFilter = "";
+			if($TimeFrom -is [int]){
+				$TimeFromFilter = $TimeFrom;
+			} else {
+				$TimeFromFilter = Datetime2Unix $TimeFrom;
+			}
+		
+			$APIParams.params.add("time_from", $TimeFromFilter); 
+		}
+		
+		if($TimeTill){
+			[string]$TimeTillFilter = "";
+			if($TimeTill -is [int]){
+				$TimeTillFilter = $TimeTill;
+			} else {
+				$TimeTillFilter = Datetime2Unix $TimeTill;
+			}
+			
+			$APIParams.params.add("time_till", $TimeTillFilter ); 
+		}
+
+		if($Hosts){
+			$NamesToConvert = @();
+			[int[]]$hostids =  $Hosts | %{
+				if($_.hostid){
+					return $_.hostid;
+				} else {
+					if ($_ -is [string]){
+						$NamesToConvert += $_;
+					} else {
+						return [int]$_;
+					}
+				}
+			}
+			
+			if($NamesToConvert){
+				write-verbose "Get-ZabbixHistory: Castings hosts to groups ids..."
+				[hashtable[]]$ConvertedHosts = ConvertHostNames2Ids $NamesToConvert;
+				$hostids += @($ConvertedHosts | %{$_.hostid});
+			}
+		
+			$APIParams.params.add("hostids", $hostids )
+			write-verbose "Get-ZabbixHistory: Groups add casted sucessfully!"
+		}
+		
+		if($Items){
+			[int[]]$itemids = @();
+			
+			$Items | %{
+				if($_.itemid){
+					$itemids += $_.itemid
+				} else {	
+					$itemids += [int]$_;
+				}
+			}
+			
+			$APIParams.params.add("itemids", $itemids )
+		}
+		
+		if($history){
+			$APIParams.params.add("history", $history )
+		}
+
+		write-verbose "Get-ZabbixHistory: About to generate json from apiparams!"
+		$APIString = ConvertToJson $APIParams;
+		write-verbose "JSON is: $APIString";
+		
+		#Chama a Url
+		$resp = CallZabbixURL -data $APIString;
+		$resultado = TranslateZabbixJson $resp;
+		
+		
+		$ResultsObjects = @();
+		if($resultado){
+			$resultado | %{
+				$r = New-Object PSObject -Prop $_;
+				
+				#Adiciona o datetime local...
+				if($r | gm "clock"){
+					$r | Add-Member -Type Noteproperty -Name "datetime" -Value (UnixTime2LocalTime $r.clock)
+				}
+
+				$ResultsObjects += $r;
+			}
+		}
+
 		return $ResultsObjects;
 	}
 
