@@ -1,6 +1,6 @@
 ﻿@{
     PowerShellVersion 	= "3.0.0"
-    ModuleVersion  		= "0.0.3"
+    ModuleVersion  		= "0.0.4"
 	RootModule 			= 'powerzabbix.psm1'
 	Author				= 'Rodrigo Ribeiro Gomes'
 	Description 		= "Powershell❤️Zabbix"

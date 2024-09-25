@@ -13,7 +13,7 @@ if($Global:PowerZabbix_Storage -eq $null -or $ResetStorage){
 }
 
 
-. (Join-Path $PSSCriptRoot "lib" "util.ps1")
+. "$PSSCriptRoot/lib/util.ps1"
 Set-Alias PowerZabbixHttp InvokeHttp
 
 
