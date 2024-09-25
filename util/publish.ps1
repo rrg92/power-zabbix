@@ -42,14 +42,17 @@ if($CompileDoc){
 # Module version!
 if($CheckVersion){
 	# Current version!
+	write-host "Checking version"
 	$LastTaggedVersion = git describe --tags --match "v*" --abbrev=0;
+	write-host "	LastTagVersion: $LastTaggedVersion";
 	
 	if($LastTaggedVersion){
 		$TaggedVersion = [Version]($LastTaggedVersion.replace("v",""))
 	}
 
-
-	$Mod = import-module $ModuleRoot -force -PassThru;
+	
+	write-host "Importaing module from $ModuleRoot"
+	$Mod = import-module "./$ModuleRoot" -force -PassThru;
 
 	if($TaggedVersion -ne $Mod.Version){
 		throw "PUBLISH_INCORRECT_VERSION: Module = $($Mod.Version) Git = $TaggedVersion";
