@@ -1,4 +1,15 @@
+![PowerShell Gallery Version](https://img.shields.io/powershellgallery/v/powerzabbix)
+![PowerShell Gallery Downloads](https://img.shields.io/powershellgallery/dt/powerzabbix)
+
 # PowerZabbix
+
+* [english](/docs/en-US/START-README.md)
+
+O PowerZabbix é um módulo powershell que encapsula as chamadas da API do Zabbix, permitindo você invocar diretamente do Powershell, usando os recursos do powershell, como pipeline, etc.  
+
+Com alguns poucos comandos, você pode automatizar a criação de hosts, hosts grups, itens, etc.  
+
+**IMPORTANTE: Este projeto ficou parado por algum tempo, e agora resolvi atualizá-lo novamente. Ainda existem muitos endpoints e documentação. Estou ciente das issues que foram abertas. Se você sabe powershell e quiser contribuir, estou aceitando ajudas para me ajudar a manter esse projeto atualizado!**
 
 PowerZabbix allows query zabbix data via the zabbix api and access frontend using powershell code!
 In addition to the cmdlets that represent API calls, this tool adds some other cmdlets and parameters to enhance de user experience with zabbix API.
@@ -6,130 +17,129 @@ In addition to the cmdlets that represent API calls, this tool adds some other c
 It is easy start managing zabbix, gathering data to generate custom reports, download maps, etc. with this tool! Check examples section to ideas.
 
 
-## Download, install and start using
+## Instalação  
 
-This tool is a powershell module. Powershell modules are way to pack many powershell commands. For use the commands, you must import the module to the powershell session.
-If you is a experient powershell user, then just install download the project and install module in your way.
-If you is not a experient user, follow this steps to download:
 
-* Download latest stable release of this. It will a zipped file. There are many ways to install this module.
+A forma mais simples de instalar o powerzabbix é usando o comando `Install-Module powerzabbix`:
 
-### Way 1: Install module to a module path
+```powershell 
+Install-Module powerzabbix
+```  
 
-* Extracts the contents of the zipped files to a powershell module path. Powershell provide many locations as module paths. Use following powershell command to determine available powershell module locations. You can extract the contents to one of them (remeber that you must have write permissions to extracts contents to directory of your choose):
+
+Caso voce tenha problemas, pode fazer um clone desse repositório e importá-lo:
+
 ```powershell
-$Env:PsModulePath -split ";"
-```
-Tip: The directory in C:\Users\<UserName>\Documents\WindowsPowershell\Modules can not exists. You must create and can extract to it. If you download to it, just user _UserName_ can use module in this way.
-
-* To start using, in powershell, run:
-```powershell
-import-module power-zabbix -force;
+cd C:\temp
+git clone https://github.com/rrg92/power-zabbix
+cd power-zabbix 
+import-module .\powerzabbix 
 ```
 
-### Way 2: Install the module in any directory of your preference
-
-* Choose a folder where to extract the zipped file. For example, C:\temp
-* To start using, in powershell, run:
-```powershell
-import-module C:\temp\power-zabbix -force;
-```
-
-* After it, you can start using the cmdlets available.
-
-#### About powershell execution policies
-
-Powershell contains a mechanism that prevents script execution by default. They are execution policies.
-You must run the powershell in a session allowed to run scripts. If you receive a error containing "script execution disabled", you have some options to fix it:
-
-* **Option 1**: If you are a Administrator and want disable this check, opens powershell as Administrador and runs: Set-ExecutionPolicy Unrestricted. Reopen all sessions where you want use module.
-
-* **Option 2**: If you are not a Administrator, then start powershell using following commad: powershell -ExecutionPolicy Unrestrcited. You can call this from a cmd prompt or another powershell session.
+**IMPORTANTE: Você pode precisar habilitar a execução de scripts no seu ambiente, com Set-ExecutionPolicy**
 	
 	
-	
-## Basic usage
+## Uso básico
 
-Before getting of updating zabbix, you must authenticate on the server, just like you do when accessing zabbix via the web.
-For this, we provide a cmdlet called *Auth-Zabbix*. This is simple form to use it:
+Antes de usar este módulo, é importante ter o seguinte em mãos:
+
+- A URL zabbix (certifique-se que é acessível a partir do seu computador. Ex.: teste a autenticação no navegador antes)
+- Usuário/Senha ou uma API Token
+
+Então, a primeira coisa a se fazer é autenticar:
 
 ```powershell
-Auth-Zabbix -URL 'http://myZabbixIPOrDNSName/zabbix'
+import-module powerzabbix # obviamente, deve importar o modulo na sessão!
+
+# Utilize o comando Connect-Zabbix para autenticar!
+Connect-Zabbix 'http://IpOrDNS'
+
+# As credenciais serão solicitadas!
+# Apos autenticar, voce pode usar os comandos, como por exemplo:
+Get-ZabbixHost # listar os hosts!
+
 ```
 
-After this, the cmdlet will prompts you credentials. If any erros occurs in the authentication, a error will be trhown.
-Note that URL Passed must be the same URL that you use to access zabbix web. If your URL not include the "/zabbix", then not use them.
+O comando Connect-Zabbix é o ponto de partida para autenticação.  
+Você pode especificar vários formatos de URL e até uma API Token. Saiba mais sobre usando `get-help Connect-Zabbix`.  
 
-You just call Auth-Zabbix one time. If the authentication is sucessfully, then a session is created and them it is cached is used by all cmdlets.
-A session is pair of URL/Username. If you try authenticate again with same URL and UserName, the session in cache is used. You can use the -Force parameter to force a new authentication, generating a new session.
+### Várias sessões 
 
-### About using multiple sessions
-
-You can use Auth-Zabbix to generate multiple sessions. For example, you can use Auth-Zabbix to authenticate in ZabbixHost1 and ZabbixHost2.
-When you authenticate in just one session, the PowerZabbix uses it as default session, and all cmdlets will use this session.
-When multiple sessions exists, you must explicity define a default session, otherwise the cmdlet will fail with "NO DEFAULT SESSION" error.
-You can use the Get-ZabbixSessions (or result of Auth-Zabbix) and Set-DefaultZabbixSession to define default session. For example:
+Você pode criar várias conexões, com diferentes servidores zabbixes, ou com o mesmo servidor usando usuaros diferentes.
+Porém, somente uma destas sessões estão ativas por vez (isso pode mudar em breve):
 
 ```powershell
 
-#Creates a session o Host1
-$s1 = Auth-Zabbix -URL 'https://ZabbixHost1/zabbix';
-$s2 = Auth-Zabbix -URL 'https://ZabbixHost2/zabbix';
+# Cria duas sessoes 
+$s1 = Connect-Zabbix -URL 'https://ZabbixHost1/zabbix';
+$s2 = Connect-Zabbix -URL 'https://ZabbixHost2/zabbix';
 
-#Setting a default zabbix sessions, using the output of Auth-Zabbix
+# Define a sessao retornada em $2 como default:
 $s2 | Set-DefaultZabbixSession
 
-#Choosing a session from all session list!
-$AllSessions = Get-ZabbixSessions;
-
-#View the default session
+#verifica a default!
 Get-DefaultZabbixSession
-
-#Changing the default session to the first session returned.
-$s[0] | Set-DefaultZabbixSession
 ```
 
-Use the Get-Help Auth-Zabbix to more help and parameters avaliable.
+### Exemplo: Listando e atualizando hosts
 
-
-### Example 1: Getting hosts
-
-The cmdlet Get-ZabbixHost is useful to retrive hosts.
-It have a lot of parameters like the host.get. We are working to adding all parameters! Keep updated!
+O comando `Get-ZabbixHost` é o principal para obter a lista de hosts.  
+Ele é equivalente ao método host.get da API. Muitos parâmetros já foram adicionados, e, os demais serão adicionados:
 
 ```powershell
 
-# Get a host with specific id
+# Obter um host com um id específico
 Get-ZabbixHost -Id 10084
 
 
-# Get all hosts in the group "DATABASE"
+# Obter todos os hosts do grupo "DATABASE"
 Get-ZabbixHost -Groups 'TEST'
 
-#Get all hosts in the group mssql and postgres
+# Obter todos os hosts que estão no grupo MSSQL ou POSTGRES
 Get-ZabbixHost -Groups 'MSSQL','POSTGRES'
 
-# Get all hosts in the group LINUX, and output just hostid, hostname and visible name.
+# Todos os hosts do grupo LINUX, retornando apenas as propriedades hostid, hostname and visible name.
 Get-ZabbixHost -Groups 'LINUX'  -output 'hostid','host','name'
 
-# The next example if more complex, but just use simples constructs from PowerZabbix and powershell language.
-# First, we store hosts from WINDOWS group in a variable. Up to here, we just out the result to the console.
-# This is useful if we need access this data multiple times or if want change the data and pipe to another cmdlet. 
-# Instead querying zabbix server everty time, we just cache in local memory via a powershell variable.
-# We use the -output parameter to specify that we want the 'hostid' and 'hostname' properties.
+# O próximo exemplo é um pouco mais complexo se você não está acosumtado com powershell
+# Primeiro, nós armazenamos todos os hosts do grupo WINDOWS em uma variável.
+# Isso é útil se você precisar acessar esses dados várias vezes 
+# Ao invés de ficar consultando isso no zabbix toda hora, você salva isso na sua sessão do powershell!
+# Graças ao parâmetro -output, nós retornamos apenas poucos dados da api.
 $AllHosts = Get-ZabbixHost -Groups 'WINDOWS' -output 'hostid','host'
 
-#Suppose you want update all hostsnames of the hosts in WINDOWS group. For example, you want add the string "WIN-" at the start of the hostname. This simple for 1 or 10 hosts. But if you have 1000 hosts, this script can save time (and money).
-#Because we already have all hosts in WINDOWS GROUP in $AllHosts variable, we just need use them (we suppose that no more hosts were added since last call to Get-ZabbixHost)
+# Suponha que voce queria atualizar todos os nomes de host do WINDOWS group. 
+# Por exemplo, voce quer adicionar o prefix "WIN-" no início. ]
+# Isso seria simples para fazer em 10 hosts. Mas em 1000, as coisas podem complicar um pouco...
+# Vamos supor que o resultado do comando anterior contenha essa lista. Entao, primeiro, adicionamos o prefixo com um simples comanod foreach (%), do powershell:
 $AllHosts | %{  $_.host = "WIN-"+$_.host };
 
-# TO update host, just use the "Update-ZabbixHost". You can pipe the hosts to it.
-# Before update, you can use WhatIf to see what the cmdlet will do and JSON submeted to zabbix server:
+# O comando acima é apenas powershell, nada em especial. Ele itera sobre o array de hosts em $Allhosts, e para cada um, altera a proprioedade host.
+
+#Até aqui, atualizamos somente na memória da nossa sessão!
+# Para efetivar isso no abbix, precisamos usar o comando Update-ZabbixHost
+# Podemos usar o pipe para passar os valores.
+# E, antes de atualizar, o parâmetro -WhatIf pode ser usado para apenas simular o que aconteceria:
 $AllHosts | Update-ZabbixHost -WhatIf
 
-#Now, if you secure, then just update!
+#e, uma vez que voce confirmou, basta executar!
 $AllHosts | Update-ZabbixHost;
 
+
+# Para mostrar mais algumas facilidades do PowerZabbix, considere este exemplo:
+#	Nós queremos adicionar um monte de hosts para um hostgroup
+#	A API não define um jeito de adicionar grupos ao um host. Ela espera uma lista completa que sobrescreverá a lista anterior.
+#	For exemplo, imagine que um host A pertence aos grupos 1,13,40,20,59 e um host B pertence ao grupo 1 e 2. Você quer adicionar esses hosts no grupo 100.
+# Para fazer isso, voce teria que fazer o seguinte usando a API:
+#	Obter a lista atual
+#	Adicionar o novo id 
+#	invocar o metodo host.update coma  lista atualizada.
+#
+# O cmdlet Update-ZabbixHost simplifica isso, graças ao parâmetro -Append
+$LotOfHosts = Get-ZabbixHost -output @('hostid')
+
+# Adiciona ao grupo MY_NEW_GROUP
+$LotOfHosts | Update-ZabbixHost -Groups 'MY_NEW_GROUP' -append
 
 #To show you the enhacements and facilites provided to PowerZabbix, consider this example.
 # We want add a lot of hosts to a hostgroup!
@@ -146,101 +156,104 @@ $AllHosts | Update-ZabbixHost;
 # Here we get all hosts. Is not important the groups...
 # note that specify the unique property 'hostid'. This is because we not need any property to do this...
 # The @('hostid') is need due to fact we specify a unique value and the API expects this as array. With this, we ask to powershell to treat this values as array, not a string...
-$LotOfHosts = Get-ZabbixHost -output @('hostid')
 
-#Check what will be updated...
-$LotOfHosts | Update-ZabbixHost -Groups 'MY_NEW_GROUP' -append -WhatIf
 
-#Now, update!
-$LotOfHosts | Update-ZabbixHost -Groups 'MY_NEW_GROUP' -append
-
-#Some tips when using Update-* cmdlets
-# Most of this cmdlets expects objects returned by respectived Get- cmdlet.
-# Use output parameter to return just properties that you will update. This reduce network traffic and zabbix processing.
-
+# Dica ao usar comandos Update-*
+# A maioria destes comandos espera o retorno do cmdlet respectivo Get-*
+# Use o parâmetro -output do comando Get-*, para trazer somente o que você precisa atualizar. Isso reduz o tráfego desnecessário e ajuda aliviar seu zabbix e banco.
 ```
 
+## Nomenclatura
 
-## CmdLets return type
+A mairia dos comandos são wrappers para a API do zabbix, com a possiblidade opcções adicionais para facilitar o uso.  
+Sabendo disso, fica mais fácil encontrar um comando para sua necessidade:
 
-Most of cmdlets returns a object (or array of objects) with same properties returned by the equivalent api method.
-You must always check the cmdlet documentation to more information, using Get-Help.
+### Comandos que implementa a API diretamente  
 
+Existe um grupo de comandos que implementam as funcionalidades diretas da API.
+Eles possuem parâmetros e um comportamento muito próximo ao do método respectivo da API. 
+O formato é:
 
-## CmdLets nomenclature
-
-The PowerZabbix provides implementations of zabbix api and facilites to help managing zabbix.
-Following sections explain the type of cmdlets the PowerZabbix defines.
-
-### API implementations cmdlets
-This cmdlets is created to directly implement a API method. Parameters names and behvarios are close to the respective method parameters.
-The cmdlets that are created to implement a API method contains following format:
-
-	Verb + -Zabbix + ObjectCamelCaseName
+	Verbo + -Zabbix + ObjectCamelCaseName
 	
-The Parts are:
 	
-* Verb = The action that cmdlet will do.
-* -Zabbix = Fixed string. This represent the cmdlet is a API implementation.
-* ObjectCamelCaseName = This is camel case name of object. For example, for hostgroup, will be HostGroup
+* Verbo  
+A ação. Geralmente é a segunda parte. Por exemplo, host.get, será Get-ZabbixHost.  
+Nem toda ação tem um verbo aprovado direto no powershell, então, o verbo aprovado mais próximo será usado.  
+Por exemplo, host.create não fica Create-ZabbixHost, e sim New-ZabbixHost, porque o nonme Create não é aprovado como um verbo powershell.  
+Porém, para que seja intuitivo, alias podem ser criados.
+
+* -Zabbix = É uma string fixa. Todo comando exportado do módulo powerzabbix deve ter essa string no nome.  
+
+* ObjectCamelCaseName  
+Este é padrão camel case do objeto respectivo em que a api faz efeito.  Por exemplo, hostgroup.get fica Get-ZabbixHostGroup. 
 
 
+Alguns exemplos:
+
+* Get-ZabbixHost => host.get
+* Update-Zabbixhost => host.update 
+* New-ZabbixHostGroup => hostgroup.create
+* Confirm-ZabbixEvent => event.acknowledge
+* Remove-ZabbixItem => item.delete
+
+### FRONTEND
+
+Algumas funcionalidades do zabbix não são fornecidas pela API, e sim pelo frontend.  
+Por exemplo, o donwload das imagens dos mapas não é possível pela API. É uma feature do frontend.  
+Por se rque, em uma determinada versão, se tenha suporte.  
+
+Porém, para prover o máximo de experiência no powerzabbix, usamos alguns hacks para conseguir trazer a funcionalidade de frontend pra linha de comando.  
+É importante saber que, devido a essa natureza, dependendo da versão do seu zabbix, se atualizar, por exemplo, essas implementações podem falhar.  
+Se for este o seu caso, abra issues para que possamos rapidamente avaliar alternarivas e correções.  
+
+Para manter separadamente da implementação da API oficial, os comandos do frontend seguem esse padrão de formato:
+
+	Verbo + -ZabbixFrontEnd + ObjectCamelCaseName
 	
-These are examples:
+Examplos:
 
-* Get-ZabbixHost 			=> host.get
-* Update-Zabbixhost 		=> host.update 
-* Create-ZabbixHostGroup 	=> hostgroup.create
-* Ack-ZabbixEvent			=> event.acknowledge
-* Delete-ZabbixItem			=> item.delete
+* Add-ZabbixFrontendMapImage => Adiciona os bytes do mapa retornado por Get-ZabbixMap.
 
-### FRONTEND functionality
-
-This cmdlets fill a lack in API by providing data or actions via the calls to zabbix web URL.
-For example, the API currently dont support download of maps. This is a feature of the frontend.
-Thanks to this cmdlets, the PowerZabbix provides a progrmatic way to access maps images.
-It generally must run in conjunction with result of some API cmdlet.
-The cmdlet name format is:
-
-	Verb + -ZabbixFrontEnd + ObjectCamelCaseName
-	
-Examples:
-
-* Add-ZabbixFrontendMapImage		=> This cmdlet adds a mapp to the maps returned by Get-ZabbixMap.
 ```powershell
-#Gets a zabbix map object (contains mapid, etc...)
-$MyMap = Get-ZabbixMap -Name "My network topology"
+# obtém um obejto mapa!
+$MyMap = Get-ZabbixMap -Name "topologia da minha rede"
 
-#Adds the map bytes to the $MyMap object! This will add the mapImage property to the $myMap object.
+# gera a iomagem do mapa com severidade 3, e adicioa os bytes da imagem no objeto!
 $MyMap | Add-ZabbixFrontendMapImage -Minseverity 3
 
-#Write the map to a file in local computer!
+# Agora, é so escrever em um arquivo!
 [Io.File]::WriteAllBytes('C:\temp\maps.png', $MyMap.mapImage.bytes);
 ```
 
-### Auxiliary cmdlets
+### cmdlets Auxiliares
 
-This cmdlets provided some additional features in order to facilitie some operation.
-It are anything that not in previous categoires.
+Alguns cmdlets nao necessariamente interagem com a API, implementam algo da API, mas complemetam criando objetos ou facilitando a criação de estrutras complexas:
 
 
 Examples:
 
-* Auth-Zabbix			=> Provides a way to generate zabbix sessions and handles URLs, users and passwords.
-* Get-ZabbixSessions	=> List all zabbix sessions created using Auth-Zabbix
-* Get-InterfaceConfig	=> Returns a hashtable with parameters to input in Create-ZabbixHost, parameter Interface.
+* Get-ZabbixSessions	=> lista sessoes
+* Get-InterfaceConfig	=> facilita a criacao de um objeto interface , para ser usado com New-ZabbixHost
 	
 
-## Getting help
+## Explore
 
-You can use Get-Command -Module power-zabbix to get all avaliable cmdlets.
-You also can use Get-Help to get help.
-We are working to implement new API methods and enhance the documentation.
+Use `Get-Command -Module powerzabbix`c para ver todos os comandos
+Use `Get-Help -full NomeComando` para obter help sobre o comando!  
+A cada nova versão, iremos melhorar mais ainda a documentação destes comandos com detalhes e exemplos.
 
 
-## Help enhance
+## Contribua  
 
-USe the issues to inform bugs or enhancements.
+Você pode contriubuir com o powerzabbix de várias menrias:
+
+- Pode ajudar sugerindo melhorias e complementos da documentação 
+- Pode sugerir novas funcionalidades 
+- pode enviar pull requests com correções 
+- Pode ajudar sinalizando quando novos recursos das novas versões do zabbix forem lançadas 
+
+Utilize as issues!
 
 
 

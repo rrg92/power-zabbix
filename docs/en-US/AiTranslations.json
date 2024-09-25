@@ -1,0 +1,348 @@
+{
+    "cmdlets/Get-ZabbixTrigger.md":  {
+                                         "SrcHash":  "266CBB2033FC8BCCF43E255E9A764CD7CF9ADDEF89BEDDD8A147A6621FB13FE3",
+                                         "Provider":  "google",
+                                         "InputTokens":  922,
+                                         "SrcLang":  "pt-BR",
+                                         "TargetHash":  "FB0D243A67EDBDF172A35CF2C55E3B557210683311639C1A01E6E3BED9886CEA",
+                                         "Model":  "gemini-1.5-flash-latest",
+                                         "OutputTokens":  813
+                                     },
+    "cmdlets/Get-ObjectForUpdate.md":  {
+                                           "SrcHash":  "0731CC0225B5A29DEFD257B6EA4DD3F4209A165D90FE43B23B34B72825F6C5A1",
+                                           "Provider":  "google",
+                                           "InputTokens":  407,
+                                           "SrcLang":  "pt-BR",
+                                           "TargetHash":  "6EAB325F7477B22DCF7861E601F5053CABC0E46C533E54AFCF433A346AD91742",
+                                           "Model":  "gemini-1.5-flash-latest",
+                                           "OutputTokens":  297
+                                       },
+    "cmdlets/Connect-Zabbix.md":  {
+                                      "SrcHash":  "B4835A9575765CE47B8055BEA62C4F6955F435C2999AC787F0BCBEFABF3FFCE0",
+                                      "Provider":  "google",
+                                      "InputTokens":  952,
+                                      "SrcLang":  "pt-BR",
+                                      "TargetHash":  "AFD509D99520F8405A7027C0F2D3F4C19FD2EDCEBF8A8DF11B33BDB738F02340",
+                                      "Model":  "gemini-1.5-flash-latest",
+                                      "OutputTokens":  809
+                                  },
+    "cmdlets/Get-ZabbixHistory.md":  {
+                                         "SrcHash":  "3BA077BA9A52A688C29B0C1D0CF9A710417AD72E388048C8C00AC3BB0AC6FE3B",
+                                         "Provider":  "google",
+                                         "InputTokens":  614,
+                                         "SrcLang":  "pt-BR",
+                                         "TargetHash":  "FA9548F6BEBFEB532DD444E774429AD15DBDA365348B01603B4C86AEAD994D9B",
+                                         "Model":  "gemini-1.5-flash-latest",
+                                         "OutputTokens":  505
+                                     },
+    "cmdlets/New-ZabbixApiParams.md":  {
+                                           "SrcHash":  "737C2A1EE124FE89A26961F056EC1233E204BF8A2561597C2B454B2249981CB2",
+                                           "Provider":  "google",
+                                           "InputTokens":  334,
+                                           "SrcLang":  "pt-BR",
+                                           "TargetHash":  "D0C9ED5530FD24A34F566936AA1CEE386EE905176630F2DE765BAED037155F65",
+                                           "Model":  "gemini-1.5-flash-latest",
+                                           "OutputTokens":  223
+                                       },
+    "IsFixedSize":  false,
+    "IsReadOnly":  false,
+    "cmdlets/Get-ZabbixMap.md":  {
+                                     "SrcHash":  "28DF7E5E1ECA9C02044E6A76A3B8D75B08DBD3E1840AD1DA2B90B58528A7AA0F",
+                                     "Provider":  "google",
+                                     "InputTokens":  603,
+                                     "SrcLang":  "pt-BR",
+                                     "TargetHash":  "6D456A5DC152144C81DA2B7B52EE243B2C46390A1B0A19625724B461F7833CDF",
+                                     "Model":  "gemini-1.5-flash-latest",
+                                     "OutputTokens":  495
+                                 },
+    "cmdlets/Get-NewZabbixParams.md":  {
+                                           "SrcHash":  "C21D7D120CFB9D3F310C737FFA40725E695CEE30F281B00FEB17D64C5BF4F240",
+                                           "Provider":  "google",
+                                           "InputTokens":  268,
+                                           "SrcLang":  "pt-BR",
+                                           "TargetHash":  "3F4978974DE96C9AE650C54443A4BBB9E09316AD7531652B65822D02E7F40970",
+                                           "Model":  "gemini-1.5-flash-latest",
+                                           "OutputTokens":  157
+                                       },
+    "cmdlets/Remove-ZabbixItem.md":  {
+                                         "SrcHash":  "800523FC9B5830BE35337FE3CB4F1FA36760FFC6DE774EB2557BF687BAC2C9C4",
+                                         "Provider":  "google",
+                                         "InputTokens":  477,
+                                         "SrcLang":  "pt-BR",
+                                         "TargetHash":  "A9D80AE05977256CB42F5CD21FE96FC5206B3F994C797DF65A3DA6F7B2E5DAF1",
+                                         "Model":  "gemini-1.5-flash-latest",
+                                         "OutputTokens":  368
+                                     },
+    "cmdlets/Update-ZabbixHost.md":  {
+                                         "SrcHash":  "8C8745429ACD47B274F72437BE3F730F32BAAA478C3443D81FAFA833B87D078B",
+                                         "Provider":  "google",
+                                         "InputTokens":  599,
+                                         "SrcLang":  "pt-BR",
+                                         "TargetHash":  "1646E0A9F4B8002740338E09B08E9E658DF61BA7C0D5D00CBD886550CE3A4BD0",
+                                         "Model":  "gemini-1.5-flash-latest",
+                                         "OutputTokens":  488
+                                     },
+    "cmdlets/Get-DefaultZabbixSession.md":  {
+                                                "SrcHash":  "46C2D4C8B9820D4B2F827EE663350CE484A32FA825F6AA7DF1635DAD4C0A0839",
+                                                "Provider":  "google",
+                                                "InputTokens":  199,
+                                                "SrcLang":  "pt-BR",
+                                                "TargetHash":  "47C08B711EBF5EC9FFF850409F4036D3632CA9F53D51DD49A7C5E075D06157A1",
+                                                "Model":  "gemini-1.5-flash-latest",
+                                                "OutputTokens":  89
+                                            },
+    "START-README.md":  {
+                            "SrcHash":  "F60BABEBCE3A22454AFA35D779650522FDA5F593BB559B69FB7DA1F3E9D73386",
+                            "Provider":  "google",
+                            "InputTokens":  3600,
+                            "SrcLang":  "pt-BR",
+                            "TargetHash":  "A26935F12EAD31C16B6282D0E413A4AC48BFF362639C61029A86145E928C794A",
+                            "Model":  "gemini-1.5-flash-latest",
+                            "OutputTokens":  2777
+                        },
+    "cmdlets/Get-InterfaceConfig.md":  {
+                                           "SrcHash":  "F50FC030B955227181AFD0BB55D005FC402B25FE34A4D3AA4D1BAAF4CEAF84BE",
+                                           "Provider":  "google",
+                                           "InputTokens":  545,
+                                           "SrcLang":  "pt-BR",
+                                           "TargetHash":  "EB5706B61BBAF198B211C9CFCCF828E5007CC6412095CA974AC33DD88220E028",
+                                           "Model":  "gemini-1.5-flash-latest",
+                                           "OutputTokens":  435
+                                       },
+    "cmdlets/Get-ZabbixItem.md":  {
+                                      "SrcHash":  "67D7B0F3FEE6397752594086B16AE877DB36EE4A8CE4D577E9A56666864F3277",
+                                      "Provider":  "google",
+                                      "InputTokens":  923,
+                                      "SrcLang":  "pt-BR",
+                                      "TargetHash":  "74039974042212C25D1DF4FBF10758CCFAD0A274CD3E4D2C03591BE8562734F2",
+                                      "Model":  "gemini-1.5-flash-latest",
+                                      "OutputTokens":  814
+                                  },
+    "cmdlets/Remove-ZabbixSession.md":  {
+                                            "SrcHash":  "7909DCBB1AFD08E30EB43C020755C923D0D4101FBA15D7EA938312FCF9AC1F90",
+                                            "Provider":  "google",
+                                            "InputTokens":  335,
+                                            "SrcLang":  "pt-BR",
+                                            "TargetHash":  "A74055728CC86B2D322B0DA813354E246FC18E6F64603693A50E3EB7701887E9",
+                                            "Model":  "gemini-1.5-flash-latest",
+                                            "OutputTokens":  210
+                                        },
+    "cmdlets/Get-ZabbixAction.md":  {
+                                        "SrcHash":  "97A9610E0D5D5CC02C94D8269A3C6A67191631C727C3DB8BE712411C14C8F45D",
+                                        "Provider":  "google",
+                                        "InputTokens":  988,
+                                        "SrcLang":  "pt-BR",
+                                        "TargetHash":  "FCD83D8710F068665AF027D030D410E6FAD6F8D97191751EEB3A4B34C276D6A5",
+                                        "Model":  "gemini-1.5-flash-latest",
+                                        "OutputTokens":  880
+                                    },
+    "cmdlets/Get-ZabbixHost.md":  {
+                                      "SrcHash":  "49470B03081B41698DA201BFA2C2A6DF5FBA9DFB2DDC6235B54859DEA098B84A",
+                                      "Provider":  "google",
+                                      "InputTokens":  1150,
+                                      "SrcLang":  "pt-BR",
+                                      "TargetHash":  "65EC62F576DEE58FE3986EFFE49AD4FB205B397A1CA390611D3F88D06C1C318D",
+                                      "Model":  "gemini-1.5-flash-latest",
+                                      "OutputTokens":  1002
+                                  },
+    "Values":  [
+
+               ],
+    "cmdlets/New-ZabbixItem.md":  {
+                                      "SrcHash":  "BF9712B8B75EC46DA5EC5C29E3BB64562258506056B7EA91F043D4CAAA3B1409",
+                                      "Provider":  "google",
+                                      "InputTokens":  889,
+                                      "SrcLang":  "pt-BR",
+                                      "TargetHash":  "3DD5B544A64B8D2C526BC2BC8CC07EF3F9D5C0AD0D00E4D5C07D6F378C05948B",
+                                      "Model":  "gemini-1.5-flash-latest",
+                                      "OutputTokens":  779
+                                  },
+    "cmdlets/Get-ZabbixHostGroup.md":  {
+                                           "SrcHash":  "FE590D17733DD5FF6FCD3D2FA4AECAC0D96DEEEADD16AA427752E7E19F5FB482",
+                                           "Provider":  "google",
+                                           "InputTokens":  606,
+                                           "SrcLang":  "pt-BR",
+                                           "TargetHash":  "DBBD1107AD8DEA0CA6E4271F40BD563B5C49FA1C8C2AA0448D0773E5CD95FF24",
+                                           "Model":  "gemini-1.5-flash-latest",
+                                           "OutputTokens":  494
+                                       },
+    "cmdlets/Get-ZabbixScript.md":  {
+                                        "SrcHash":  "9C2AD5DB5EC2BA2A0C12979CC1B490B1A42669167D2068FCEA13B19E53E5C884",
+                                        "Provider":  "google",
+                                        "InputTokens":  615,
+                                        "SrcLang":  "pt-BR",
+                                        "TargetHash":  "549ECE0F702E1F5669932B7EE8CDD1FC92E13E9580FEC5A092BE34FE353E4DAC",
+                                        "Model":  "gemini-1.5-flash-latest",
+                                        "OutputTokens":  505
+                                    },
+    "cmdlets/Get-ZabbixTemplate.md":  {
+                                          "SrcHash":  "DBA1B2D195D764459AB9D8008DDD05D4B27834221D66C1AB370B5C171F2FADC7",
+                                          "Provider":  "google",
+                                          "InputTokens":  459,
+                                          "SrcLang":  "pt-BR",
+                                          "TargetHash":  "5F58841B4A0A0106260C85DF062BEDCA5344E373461BA4D5E099D84EB2168DAF",
+                                          "Model":  "gemini-1.5-flash-latest",
+                                          "OutputTokens":  348
+                                      },
+    "cmdlets/New-ZabbixHost.md":  {
+                                      "SrcHash":  "831C820CDEFF79209F373F17B4AF1433EE30F6F8FFFC2F6DF2FEBCE3862A9846",
+                                      "Provider":  "google",
+                                      "InputTokens":  549,
+                                      "SrcLang":  "pt-BR",
+                                      "TargetHash":  "724250ABAB4E51896BD0D8CE60AB5F4AA5FC1E8B9CA54D62F30335033FA0E172",
+                                      "Model":  "gemini-1.5-flash-latest",
+                                      "OutputTokens":  438
+                                  },
+    "cmdlets/Get-ZabbixApiInfoVersion.md":  {
+                                                "SrcHash":  "53E110D0D93F8ABF25DFEAE88395607BBFFB7B36313A36D2368FA70BB9CB1491",
+                                                "Provider":  "google",
+                                                "InputTokens":  276,
+                                                "SrcLang":  "pt-BR",
+                                                "TargetHash":  "3AF6B65B29CFDB20BFB521B2F5064ECFC7C29BD8AAACB919B1048967B277153E",
+                                                "Model":  "gemini-1.5-flash-latest",
+                                                "OutputTokens":  165
+                                            },
+    "cmdlets/New-ZabbixHostGroup.md":  {
+                                           "SrcHash":  "5315DBC3BD989BC0177EA330F4AB9A8F2245B40D8FE358106E03180AB0CAD96B",
+                                           "Provider":  "google",
+                                           "InputTokens":  276,
+                                           "SrcLang":  "pt-BR",
+                                           "TargetHash":  "28084F7677B983C6E9C7658E626C8A2A5B89D969E5793F2D6CDE070A9B1B47DA",
+                                           "Model":  "gemini-1.5-flash-latest",
+                                           "OutputTokens":  165
+                                       },
+    "cmdlets/Remove-ZabbixHostMass.md":  {
+                                             "SrcHash":  "6F5EDC9F8A330781255AABC4A517042FA04CBF35E5BD8D002D77418075444149",
+                                             "Provider":  "google",
+                                             "InputTokens":  473,
+                                             "SrcLang":  "pt-BR",
+                                             "TargetHash":  "27575022E2710CCAB37C0084E103FF890B95BB2B3DF51244516D0AE5A92AA4FE",
+                                             "Model":  "gemini-1.5-flash-latest",
+                                             "OutputTokens":  362
+                                         },
+    "cmdlets/Confirm-ZabbixEvent.md":  {
+                                           "SrcHash":  "ADEA21572374FE86361FF893B3169C19574FBA6D9060631D66DDB2501BA96185",
+                                           "Provider":  "google",
+                                           "InputTokens":  482,
+                                           "SrcLang":  "pt-BR",
+                                           "TargetHash":  "AAD752829315D685A47BAD309553D0E2B9724C7B86B6F8783F3289918A737AA2",
+                                           "Model":  "gemini-1.5-flash-latest",
+                                           "OutputTokens":  372
+                                       },
+    "cmdlets/Remove-ZabbixHostGroupMass.md":  {
+                                                  "SrcHash":  "EA0876587501D5698D5B28361C6641EE79C198445171DA8FB3D6F71D7C7B8681",
+                                                  "Provider":  "google",
+                                                  "InputTokens":  476,
+                                                  "SrcLang":  "pt-BR",
+                                                  "TargetHash":  "34819BEB0DDD9037A51B8D51751950B3DBCDCC266F65C6E10FE4B274022F679B",
+                                                  "Model":  "gemini-1.5-flash-latest",
+                                                  "OutputTokens":  365
+                                              },
+    "cmdlets/Get-ZabbixSessions.md":  {
+                                          "SrcHash":  "F695E501B9E55191A6780380D83B0535A2C0AD55CD0B707878CC916C81138D7D",
+                                          "Provider":  "google",
+                                          "InputTokens":  265,
+                                          "SrcLang":  "pt-BR",
+                                          "TargetHash":  "E926866F797D8AEEEED83576F15E93EEBDB1C246BC2BFBD6D627C12E892C4DE0",
+                                          "Model":  "gemini-1.5-flash-latest",
+                                          "OutputTokens":  154
+                                      },
+    "cmdlets/Get-ZabbixHostObject.md":  {
+                                            "SrcHash":  "2251968999DD5178CA5C8F48F1DF6B445FB4C06E4CBA3E943666268C77BC2C67",
+                                            "Provider":  "google",
+                                            "InputTokens":  204,
+                                            "SrcLang":  "pt-BR",
+                                            "TargetHash":  "E77A3E93C49DE431B595BF0D2F9E8483EDB22F9A2F79E4CAA4CEF8F8C5F86AF0",
+                                            "Model":  "gemini-1.5-flash-latest",
+                                            "OutputTokens":  92
+                                        },
+    "cmdlets/Get-DefaultZabbixSessionId.md":  {
+                                                  "SrcHash":  "055105B2580805857468CC8A3CEF184ADDC8F5ED9BB360B052F4FF3689B51E3B",
+                                                  "Provider":  "google",
+                                                  "InputTokens":  199,
+                                                  "SrcLang":  "pt-BR",
+                                                  "TargetHash":  "2BA80768E4F22C3621C122DE7128E1F60F6B5CF5C900224907C2FA38ECEF6180",
+                                                  "Model":  "gemini-1.5-flash-latest",
+                                                  "OutputTokens":  89
+                                              },
+    "IsSynchronized":  false,
+    "cmdlets/Get-ZabbixAlert.md":  {
+                                       "SrcHash":  "641CAB8A6E7AB6BC20D7DFFD20A3BEB4875E5F48A91F15CD8AD6943A72206400",
+                                       "Provider":  "google",
+                                       "InputTokens":  1308,
+                                       "SrcLang":  "pt-BR",
+                                       "TargetHash":  "6EC5C93EFBDBC2D891BED5C2CD119C98BC215701B676574D177096FEDE31D0AC",
+                                       "Model":  "gemini-1.5-flash-latest",
+                                       "OutputTokens":  1200
+                                   },
+    "cmdlets/Invoke-ZabbixURL.md":  {
+                                        "SrcHash":  "F5A238C763C61285194E03FEB13D66B1F578400C51F32C9B56D1B4327F78078C",
+                                        "Provider":  "google",
+                                        "InputTokens":  333,
+                                        "SrcLang":  "pt-BR",
+                                        "TargetHash":  "650D41CB942A63543B7594D24603EAA0A1A166818635FCF8A2401B29D1B65A31",
+                                        "Model":  "gemini-1.5-flash-latest",
+                                        "OutputTokens":  222
+                                    },
+    "cmdlets/Invoke-ZabbixScript.md":  {
+                                           "SrcHash":  "04EB241834AA9F78B56100557AFA9274EA2CF7B42FC0F259757D81F5FEA1CB5B",
+                                           "Provider":  "google",
+                                           "InputTokens":  550,
+                                           "SrcLang":  "pt-BR",
+                                           "TargetHash":  "B5DA3FBFE676296AB48505BFDCE03D6C4B92901B55CDA4B9351983385A23C40A",
+                                           "Model":  "gemini-1.5-flash-latest",
+                                           "OutputTokens":  441
+                                       },
+    "cmdlets/Set-DefaultZabbixSession.md":  {
+                                                "SrcHash":  "3C5C01C68BA1AF7D928795303FA4E5E6B147C7FA9DEF2988B107BC60219695DB",
+                                                "Provider":  "google",
+                                                "InputTokens":  275,
+                                                "SrcLang":  "pt-BR",
+                                                "TargetHash":  "C87834C1B3E77A59EF2AFA7FA1758FB9E4D24B45C3EAE31B9A4845F27BC5659E",
+                                                "Model":  "gemini-1.5-flash-latest",
+                                                "OutputTokens":  164
+                                            },
+    "cmdlets/Add-ZabbixFrontendMapImage.md":  {
+                                                  "SrcHash":  "840FCB7D38C89ADF08BB4573740F0306F32FF7217AE0E4390B4DFE6F5C7742A8",
+                                                  "Provider":  "google",
+                                                  "InputTokens":  419,
+                                                  "SrcLang":  "pt-BR",
+                                                  "TargetHash":  "EEEE2154ED8C3AF84034A22139567642850C99252682EB450468880E4D28BA71",
+                                                  "Model":  "gemini-1.5-flash-latest",
+                                                  "OutputTokens":  308
+                                              },
+    "cmdlets/Disconnect-Zabbix.md":  {
+                                         "SrcHash":  "A09106128CB29268EA234D026BF7DECAB8D5A4AE13E0D0BC27A71A0EB2E30F6B",
+                                         "Provider":  "google",
+                                         "InputTokens":  267,
+                                         "SrcLang":  "pt-BR",
+                                         "TargetHash":  "77214C8B5CD59D44F156820C5B3487E6CDD202D66911B517725C924E03F7DC1D",
+                                         "Model":  "gemini-1.5-flash-latest",
+                                         "OutputTokens":  156
+                                     },
+    "cmdlets/Get-ZabbixEvent.md":  {
+                                       "SrcHash":  "7BB4D2138855216ED9ECE8533AA335765BBE2EE2364AB4B7A8068EB203A6B1B6",
+                                       "Provider":  "google",
+                                       "InputTokens":  1324,
+                                       "SrcLang":  "pt-BR",
+                                       "TargetHash":  "654D363C60C265E73EEA7DF8B52F39D5E1D40039016C684AC7557BB8C07BDDAC",
+                                       "Model":  "gemini-1.5-flash-latest",
+                                       "OutputTokens":  1089
+                                   },
+    "Count":  0,
+    "SyncRoot":  {
+
+                 },
+    "Keys":  [
+
+             ],
+    "cmdlets/Update-ZabbixTrigger.md":  {
+                                            "SrcHash":  "915C1B854080D62FAAA4EE4877EDBABFC592DC4226D73D9C1ECE3B1C5A2F0542",
+                                            "Provider":  "google",
+                                            "InputTokens":  493,
+                                            "SrcLang":  "pt-BR",
+                                            "TargetHash":  "35080AF9E21997C9B1E63C955C384F11E1DE6091BBCEB9E7133E35B3775477AE",
+                                            "Model":  "gemini-1.5-flash-latest",
+                                            "OutputTokens":  384
+                                        }
+}
