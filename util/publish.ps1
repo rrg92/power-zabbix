@@ -34,6 +34,7 @@ if($CompileDoc){
 	write-host "DocCompileWorkDir: $PlatyDir";
 	$DocsScript = Join-Path $PsScriptRoot doc.ps1
 	& $DocsScript $PlatyDir -SupportedLangs * -MaxAboutWidth 150
+	write-host " Done!"
 }
 
 
