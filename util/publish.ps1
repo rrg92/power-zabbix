@@ -22,7 +22,7 @@ if(!$Global:PUBLISH_DATA){
 
 if(!$PUBLISH_DATA.TempDir){
 	$TempFile =  [Io.Path]::GetTempFileName()
-	$TempDir  = $TempFile+"-powershai";
+	$TempDir  = $TempFile+"-"+$Info.ProjectName;
 	$PUBLISH_DATA.TempDir = New-Item -Force -ItemType Directory -Path $TempDir;
 }
 
@@ -51,8 +51,10 @@ if($CheckVersion){
 	}
 
 	
-	write-host "Importaing module from $ModuleRoot"
-	$Mod = import-module "./$ModuleRoot" -force -PassThru;
+	write-host "Importing module from $ModuleRoot"
+	$Mod = import-module $ModuleRoot -force -PassThru;
+	
+	write-host "	ModuleVersion: $($Mod.Version)";
 
 	if($TaggedVersion -ne $Mod.Version){
 		throw "PUBLISH_INCORRECT_VERSION: Module = $($Mod.Version) Git = $TaggedVersion";
