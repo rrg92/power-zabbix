@@ -51,6 +51,8 @@ Function StartHttpRequest {
 		,$headers 		= @{}
 		
 		,$MaxConnections = 50
+		
+		,$Session = $null
 	)
 	$ErrorActionPreference = "Stop";
 
@@ -132,15 +134,26 @@ Function StartHttpRequest {
 		RespStream 			= $null
 		RespStreamReader 	= $null
 		ReadAsyncTask		= $null
+		Cookies 			= (New-Object Net.CookieContainer)
+		Session				= @{
+					Cookies	= $null
+				}
 		
 		Completed 	= $false
 	}
 	
+	if($Session -and $Session.Cookies){
+		$Session.Cookies | ? {$_} | %{
+			verbose "Adding Cookie $($_.Name) from session..."
+			$HttpRequest.Cookies.add($_);
+		}
+	}
 
 	
 	$ContentTypeAlias = @{
 		"json" = "application/json"
 		"form" = "multipart/form-data"
+		"urlform" = "application/x-www-form-urlencoded"
 	}
 	
 	$ContentTypeAliasValue = $ContentTypeAlias[$ContentType]
@@ -169,6 +182,7 @@ Function StartHttpRequest {
 	$Web = [System.Net.WebRequest]::Create($url);
 	$Web.Method = $method;
 	$Web.ContentType = $contentType
+	$web.CookieContainer = $HttpRequest.Cookies
 	
 	$HttpRequest.WebRequest = $Web;
 	
@@ -399,10 +413,17 @@ Function StartHttpRequest {
 			
 			$Primitives = [string],[int],[decimal]
 			
-			if($data -and $data.getType() -notin $Primitives){
-				verbose "Converting input object to json string..."
-				$data = $data | ConvertTo-Json -Depth 5;
+			if($ContentType -eq "application/json"){
+				if($data -and $data.getType() -notin $Primitives){
+					verbose "Converting input object to json string..."
+					$data = $data | ConvertTo-Json -Depth 5;
+				}
+			} else {
+				if($data -is [hashtable]){
+					$data = Hash2Qs $data
+				}
 			}
+
 
 			verbose "Data to be send:`n$data"
 
@@ -565,6 +586,18 @@ function GetHttpResponse {
 			verbose "building stream reader...";
 			$IO = New-Object System.IO.StreamReader($ResponseStream);
 			
+			verbose "Checking response cookies"
+			if($HttpResp.Cookies){
+				verbose "Adding response cookies to session"
+				# Update cookie path in order to works with next requests!
+				# This is due a problem with webresponse answers and how it set path!
+				$HttpResp.Cookies | %{
+					verbose "Updating path of cookie $($_.Name). OriginalPath = $($_.Path)"
+					$_.Path = "/"
+				}
+				
+				$HttpRequest.Session.Cookies = $HttpResp.Cookies
+			}
 			
 
 			$HttpRequest.RespStream 		= $ResponseStream
@@ -765,6 +798,9 @@ function InvokeHttp {
 		,#Timeout 
 		 #Max ms aguardando por uma resposta conexão antes de encerrar
 			$Timeout = $null
+			
+		,#Passar a sessão http. Isso irá transferir os cookies de volta para o servidor, permitindo manter sessões de autenticação, por exemplo!
+			$Session = $null
 	)
 	
 	$ErrorActionPreference = "Stop";
@@ -783,6 +819,7 @@ function InvokeHttp {
 		contentType 	= $contentType
 		encoding		= $encoding 
 		headers 		= $headers 
+		session			= $Session
 	}
 	
 	$HttpRequest = StartHttpRequest @HttpReqParams
@@ -792,6 +829,7 @@ function InvokeHttp {
 		text 	= ""
 		status 	= $null
 		headers = $null
+		session = $HttpRequest.session
 	}
 	
 	$DebugData = @{

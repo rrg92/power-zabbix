@@ -14,8 +14,12 @@ if($Global:PowerZabbix_Storage -eq $null -or $ResetStorage){
 
 
 . "$PSSCriptRoot/lib/util.ps1"
-Set-Alias PowerZabbixHttp InvokeHttp
 
+$Function = Get-Item "Function:InvokeHttp"
+Copy-Item "Function:\InvokeHttp" "Function:\PowerZabbixInokeHttpVersion"
+Set-Alias PowerZabbixHttp PowerZabbixInokeHttpVersion
+
+write-host (get-command PowerZabbixInokeHttpVersion | out-string)
 
 
 
@@ -541,15 +545,8 @@ Function ZabbixAPI_List2Ids {
 		#If users wants login in frontend, then do this.
 		#This is useful for invoking some method that api dont support, like graphics.
 		if($PendingAuth -Contains "Frontend"){
-			verbose "$($MyInvocation.InvocationName): Auth on Frontend"
+			verbose "Auth on Frontend"
 			$AuthPage = $URL;
-			
-			if($AuthPage -NotLike '*/'){
-				$AuthPage = $AuthPage + '/'
-			}
-			
-			verbose "Login into frontend. Ivoking the the page $AuthPage...";
-			$LoginPage = InvokeHttp -URL $AuthPage;
 			
 			#At this point, we can setup all information need to send to zabbix login page.
 			$LoginData = @{
@@ -560,23 +557,20 @@ Function ZabbixAPI_List2Ids {
 			}
 			
 			#Just call using our function to invoke http request...
-			$LoginResult = InvokeHttp -URL $AuthPage -data $LoginData -Headers @{"Authorization" = "Bearer "}
+			verbose "Try loggin into froned: $URL";
+			$LoginResult = PowerZabbixHttp -method POST -url $AuthPage -data $LoginData -contentType "application/x-www-form-urlencoded"
 			
 			#If the login result was a 302, means sucessfully login.
 			#This is because when login is sucessfully, zabbix frontend redirects the user to another page.
 			#HTTP CODE 302 means redirections.
-			if($LoginResult.httpResponse.statusCode -eq 302){
-				$Session.FrontendSession = $LoginResult.session;
-				$Session.FrontEndAuthTime = Get-Date;
-			} else {
-				
+			if($LoginResult.text -like "*signin-container*" -or $LoginResult.text.length -le 10000){
 				#If return code was another thant 302, then somehting wrong occured.
 				#We must try find in html response possible error messages expected...
 				
 				$AllErrorMsgs = @();
 				
-				if($LoginResult.html){
-					$AllErrorMsgs += $LoginResult.html.DocumentNode.SelectNodes('//div[@class="article"]//div[@class="red"]/text()') | %{$_.InnerText};
+				if($LoginResult.text -match '<div class="red">(.*?)</div>'){
+					$AllErrorMsgs += $matches[1];
 				}
 				
 				
@@ -584,8 +578,14 @@ Function ZabbixAPI_List2Ids {
 					throw "AUTH_FRONTEND_ERROR: $($AllErrorMsgs -Join '`r`n')"
 					return;
 				}
+				
+				$ex = New-Object System.Exception("AUTH_FRONTEND_UNKOWN");
+				$ex | Add-Member -force Noteproperty HttpResp $LoginResult
+				throw $ex
 
-				throw "AUTH_FRONTEND_UNKOWN! StatusCode: $([int]$LoginResult.httpResponse.statusCode)"
+			} else {
+				$Session.FrontendSession = $LoginResult.session;
+				$Session.FrontEndAuthTime = Get-Date;
 			}
 			
 		}
@@ -2912,6 +2912,7 @@ Function ZabbixAPI_List2Ids {
 	#
 	#	bytes (the bytes of map. Just write to a file)
 	#	errro (possible errors ocurred when getting map from zabbix)
+	# Dont works more in 7.0
 	Function Add-ZabbixFrontendMapImage {
 		[CmdLetBinding()]
 		param(
@@ -2926,7 +2927,12 @@ Function ZabbixAPI_List2Ids {
 			,$File			= $null
 		)
 		
+		
+		
 		begin {
+			write-warning "This command dont works with new versions of Zabbix. We will try new way to do that. Ignoring...";
+			return;
+			
 			#Get last authentication of frontned!
 			$DefaultSession 	= Get-DefaultZabbixSession;
 			$FrontendSession 	= $DefaultSession.FrontendSession;
@@ -2953,7 +2959,7 @@ Function ZabbixAPI_List2Ids {
 		
 			
 			verbose "Accessing the map $($_.name) on url $MapURL";
-			$HttpResp = InvokeHttp -URL $MapURL -Session $FrontendSession;
+			$HttpResp = PowerZabbixHttp -URL $MapURL -Session $FrontendSession;
 			
 			try {
 				if($HttpResp.httpResponse.statusCode -eq 200){
