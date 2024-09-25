@@ -7,7 +7,6 @@ on:
 jobs:
 
   Publish:
-    needs: Tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
