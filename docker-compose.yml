@@ -3,6 +3,6 @@ services:
         build: .
         environment:
             PSGALERY: $PSGALERY_KEY
-        command: pwsh -NonInteractive -File ./util/publish-prepare.ps1 -CheckVersion
+        command: pwsh -NonInteractive -File ./util/publish-prepare.ps1 -CompileDoc
         
         
